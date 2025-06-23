@@ -45,14 +45,25 @@ class TodoListView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              title, // Displays the current filter category (e.g., "Completed", "Due Dated")
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    title, // Displays the current filter category (e.g., "Completed", "Due Dated")
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
-            ),
-          ),
+                  ElevatedButton(
+                      onPressed: () {
+                        context.read<TodoBloc>().add(LoadTodos());
+                      },
+                      child: const Row(
+                        children: [Text("Refresh"), Icon(Icons.refresh)],
+                      ))
+                ],
+              )),
           // Priority Filter Buttons (secondary filter within each main category)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -120,37 +131,40 @@ class TodoListView extends StatelessWidget {
                       ],
                     ),
                   )
-                : ListView.builder(
-                    itemCount: todos.length,
-                    itemBuilder: (context, index) {
-                      final todo = todos[index];
-                      final todoBloc = context.read<TodoBloc>();
-                      return TodoTile(
-                        todo: todo,
-                        onDelete: () => todoBloc.add(DeleteTodoRequested(todo.id!)),
-                        onEdit: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => EditTodoPage(
-                                todo: todo,
+                : Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: ListView.builder(
+                      itemCount: todos.length,
+                      itemBuilder: (context, index) {
+                        final todo = todos[index];
+                        final todoBloc = context.read<TodoBloc>();
+                        return TodoTile(
+                          todo: todo,
+                          onDelete: () => todoBloc.add(DeleteTodoRequested(todo.id!)),
+                          onEdit: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => EditTodoPage(
+                                  todo: todo,
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                        onToggle: () => todoBloc.add(ToggleTodoCompletion(todo.id!)),
-                        onView: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => TodoDetailPage(
-                                todo: todo,
+                            );
+                          },
+                          onToggle: () => todoBloc.add(ToggleTodoCompletion(todo.id!)),
+                          onView: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TodoDetailPage(
+                                  todo: todo,
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                      );
-                    },
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
           ),
         ],

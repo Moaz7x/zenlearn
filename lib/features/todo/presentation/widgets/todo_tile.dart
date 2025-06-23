@@ -21,20 +21,57 @@ class TodoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Color? getColor(int priority) {
+      if (priority == 1) {
+        return Colors.blue.shade200;
+      } else if (priority == 2) {
+        return Colors.amber.shade600;
+      } else {
+        return Colors.pink;
+      }
+    }
+
     final theme = Theme.of(context).colorScheme;
-    return Card(
+    return Container(
+      decoration:
+          BoxDecoration(color: getColor(todo.priority), borderRadius: BorderRadius.circular(20)),
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CustomCheckbox(
           value: todo.isCompleted,
           onChanged: (_) => onToggle(),
         ),
-        title: Text(
-          todo.title,
-          style: TextStyle(
-            decoration: todo.isCompleted ? TextDecoration.lineThrough : null,
-            color: theme.primary,
-          ),
+        title: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (todo.dueDate != null)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Due: ${_formatDate(todo.dueDate!)}',
+                    style: TextStyle(color: theme.tertiary, fontSize: 12),
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        "${todo.dueDate!.hour} : ${todo.dueDate!.minute} ",
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      const Icon(Icons.timer)
+                    ],
+                  )
+                ],
+              ),
+            Text(
+              todo.title,
+              style: TextStyle(
+                decoration: todo.isCompleted ? TextDecoration.lineThrough : null,
+                color: theme.primary,
+              ),
+            ),
+          ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,17 +82,6 @@ class TodoTile extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: theme.inversePrimary),
-              ),
-              Text(
-                todo.priority == 1? 'Low' : todo.priority ==2 ? 'Mid' : 'High',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: todo.priority == 1? Colors.blueAccent : todo.priority ==2 ? Colors.orange : Colors.pink),
-              ),
-            if (todo.dueDate != null)
-              Text(
-                'Due: ${_formatDate(todo.dueDate!)}',
-                style: TextStyle(color: theme.tertiary, fontSize: 12),
               ),
             if (todo.subtodos.isNotEmpty)
               Text(

@@ -1,95 +1,115 @@
-Here's the BlocBuilder you can use in your TodoListPage to show a carousel (PageView) with all todos, completed todos, and due-dated todos:
+// lib/features/todo/presentation/widgets/todo_tile.dart
+import 'package:flutter/material.dart';
+import 'package:zenlearn/core/widgets/custom_checkbox.dart';
 
-dart
-Copy
-Edit
-BlocBuilder<TodoBloc, TodoState>(
-  buildWhen: (previous, current) =>
-      current is TodoLoaded ||
-      current is CompletedTodosLoaded ||
-      current is DueDatedTodosLoaded ||
-      current is TodoInitial ||
-      current is TodoLoading,
-  builder: (context, state) {
-    if (state is TodoLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+import '../../domain/entities/todo_entity.dart';
 
-    return PageView(
-      onPageChanged: (index) {
-        switch (index) {
-          case 0:
-            context.read<TodoBloc>().add(LoadTodos());
-            break;
-          case 1:
-            context.read<TodoBloc>().add(LoadCompletedTodos());
-            break;
-          case 2:
-            context.read<TodoBloc>().add(LoadDueDatedTodos());
-            break;
-        }
-      },
-      children: [
-        // All Todos
-        _TodoListView(
-          title: 'All Todos',
-          todos: state is TodoLoaded ? state.todos : [],
-        ),
-        // Completed Todos
-        _TodoListView(
-          title: 'Completed',
-          todos: state is CompletedTodosLoaded ? state.todos : [],
-        ),
-        // Due-dated Todos
-        _TodoListView(
-          title: 'Due Dated',
-          todos: state is DueDatedTodosLoaded ? state.todos : [],
-        ),
-      ],
-    );
-  },
-);
-Create _TodoListView widget like this:
-
-dart
-Copy
-Edit
-class _TodoListView extends StatelessWidget {
-  final String title;
-  final List<TodoEntity> todos;
-
-  const _TodoListView({
-    required this.title,
-    required this.todos,
+class TodoTile extends StatelessWidget {
+  final TodoEntity todo;
+  final VoidCallback onToggle;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onView;
+  const TodoTile({
+    super.key,
+    required this.todo,
+    required this.onToggle,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onView,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (todos.isEmpty) {
-      return Center(child: Text('No $title'));
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: todos.length,
-      itemBuilder: (context, index) {
-        final todo = todos[index];
-        return TodoTile(
-          todo: todo,
-          onToggle: () =>
-              context.read<TodoBloc>().add(ToggleTodoCompletion(todo.id!)),
-          onEdit: () {
-            // your edit logic
+    final theme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        
+        leading: CustomCheckbox(
+          value: todo.isCompleted,
+          onChanged: (_) => onToggle(),
+        ),
+        title: Text(
+          todo.title,
+          style: TextStyle(
+            decoration: todo.isCompleted ? TextDecoration.lineThrough : null,
+            color: theme.primary,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (todo.description.isNotEmpty == true)
+              Text(
+                todo.description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: theme.inversePrimary),
+              ),
+              Text(
+                todo.priority == 1? 'Low' : todo.priority ==2 ? 'Mid' : 'High',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: todo.priority == 1? Colors.blueAccent : todo.priority ==2 ? Colors.orange : Colors.pink),
+              ),
+            if (todo.dueDate != null)
+              Text(
+                'Due: ${_formatDate(todo.dueDate!)}',
+                style: TextStyle(color: theme.tertiary, fontSize: 12),
+              ),
+            if (todo.subtodos.isNotEmpty)
+              Text(
+                '${todo.subtodos.where((s) => s.isCompleted).length}/${todo.subtodos.length} subtasks completed',
+                style: TextStyle(color: theme.secondary, fontSize: 12),
+              ),
+          ],
+        ),
+        trailing: PopupMenuButton(
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'view',
+              child: Row(
+                children: [Icon(Icons.visibility), SizedBox(width: 8), Text('View')],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'edit',
+              child: Row(
+                children: [Icon(Icons.edit), SizedBox(width: 8), Text('Edit')],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Delete')
+                ],
+              ),
+            ),
+          ],
+          onSelected: (value) {
+            switch (value) {
+              case 'view':
+                onView();
+                break;
+              case 'edit':
+                onEdit();
+                break;
+              case 'delete':
+                onDelete();
+                break;
+            }
           },
-          onDelete: () {
-            // your delete logic
-          },
-          onView: () {
-            // your view logic
-          },
-        );
-      },
+        ),
+        onTap: onView,
+      ),
     );
   }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
 }
-You can now replace your current BlocBuilder inside body: with this one to implement the carousel view. Let me know if you want to add a bottom navigation or a swipe indicator to make switching more intuitive.

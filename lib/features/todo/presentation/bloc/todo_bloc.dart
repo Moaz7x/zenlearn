@@ -283,6 +283,7 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
       await toggleTodoCompletion(event.todoId);
       // Reload todos immediately after toggling
       final todos = await getAllTodos(NoParams());
+
       emit(TodoLoaded(todos));
       emit(TodoOperationSuccess('Todo status updated'));
       add(LoadTodos());
@@ -413,6 +414,4 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
         hour: todo.dueDate!.hour,
         minute: todo.dueDate!.minute);
   }
-
-  
 }
