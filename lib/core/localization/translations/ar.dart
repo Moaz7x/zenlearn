@@ -33,13 +33,20 @@ const Map<String, String> arTranslations = {
 
   // Todo
   'todo': 'المهام',
-  'new_task': 'مهمة جديدة',
+  'add_new_todo': 'مهمة جديدة',
   'task_title': 'عنوان المهمة',
   'task_description': 'الوصف',
   'due_date': 'تاريخ الاستحقاق',
   'priority': 'الأولوية',
   'completed': 'مكتملة',
   'incomplete': 'غير مكتملة',
+  'todo_list': 'قائمة المهام',
+  'all_todos': 'جميع المهام',
+  'completed_todos': 'المهام المكتملة',
+  'due_dated_todos': 'المهام المستقبلية',
+  'priority_1': 'ضعيف',
+  'priority_2': 'متوسط',
+  'priority_3': 'ضروري',
 
   // Flashcards
   'flashcard_front': 'الوجه الأمامي',

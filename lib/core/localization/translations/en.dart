@@ -33,14 +33,21 @@ const Map<String, String> enTranslations = {
 
   // Todo
   'todo': 'To-Do',
-  'new_task': 'New Task',
+  'add_new_todo': 'New Todo',
   'task_title': 'Task Title',
   'task_description': 'Description',
   'due_date': 'Due Date',
   'priority': 'Priority',
   'completed': 'Completed',
   'incomplete': 'Incomplete',
-
+  'todo_list': 'Todo-List',
+  'all_todos': 'All Todos',
+  'completed_todos': 'Completed Todos',
+  'due_dated_todos': 'Due Dated Todos',
+  'priority_1': 'Low',
+  'priority_2': 'Mid',
+  'priority_3': 'High',
+  
   // Flashcards
   'flashcard_front': 'Front',
   'flashcard_back': 'Back',
