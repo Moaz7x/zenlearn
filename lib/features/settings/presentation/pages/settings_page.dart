@@ -41,6 +41,7 @@ class SettingsPage extends StatelessWidget {
                 _buildSectionTitle(context, 'language'.tr(context)),
                 const SizedBox(height: 16),
                 _buildLanguageSelector(context),
+                const SizedBox(height: 16),
               ],
             ),
           ),

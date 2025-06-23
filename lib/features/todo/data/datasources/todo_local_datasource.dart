@@ -71,6 +71,10 @@ class TodoLocalDataSourceImpl implements TodoLocalDataSource {
     });
   }
 
+  Future<void> deleteAllTodos() async {
+    await isar.todoModels.clear();
+  }
+
   @override
   Future<void> deleteReminder(int id) async {
     await isar.writeTxn(() async {
@@ -110,8 +114,33 @@ class TodoLocalDataSourceImpl implements TodoLocalDataSource {
   }
 
   @override
+  Future<List<TodoModel>> filterTodosByPriorityCompleated(int priority) async {
+    return await isar.writeTxn(() => isar.todoModels
+        .filter()
+        .isCompletedEqualTo(true)
+        .and()
+        .priorityEqualTo(priority)
+        .findAll());
+  }
+
+  @override
+  Future<List<TodoModel>> filterTodosByPriorityDueDated(int priority) async {
+    // return futureTodos;
+    final now = DateTime.now();
+    final todosPriorityDueDated =
+        await isar.todoModels.filter().dueDateIsNotNull().and().priorityEqualTo(priority).findAll();
+    final List<TodoModel> futureTodosPriority = todosPriorityDueDated
+        .where((todo) =>
+            todo.dueDate != null && todo.isCompleted == false && todo.dueDate!.isAfter(now))
+        .toList()
+      ..sort((a, b) => a.dueDate!.compareTo(b.dueDate!));
+
+    return futureTodosPriority;
+  }
+
+  @override
   Future<List<TodoModel>> getAllCompletedTodos() async {
-    return await isar.writeTxn(() => isar.todoModels.filter().isCompletedEqualTo(true).findAll());
+    return await isar.writeTxn(() => isar.todoModels.filter().isCompletedEqualTo(true).sortByPriorityDesc().findAll());
   }
 
   @override
@@ -119,14 +148,14 @@ class TodoLocalDataSourceImpl implements TodoLocalDataSource {
     final now = DateTime.now();
 
     // Step 1: Get all todos that have a non-null due date
-    final todosWithDueDate = await isar.todoModels.filter().dueDateIsNotNull().findAll();
+    final todosWithDueDate = await isar.todoModels.filter().dueDateIsNotNull().sortByPriorityDesc().findAll();
 
     // Step 2: Filter those that are due in the future
     final futureTodos = todosWithDueDate
         .where((todo) =>
             todo.dueDate != null && todo.isCompleted == false && todo.dueDate!.isAfter(now))
         .toList()
-      ..sort((a, b) => a.dueDate!.compareTo(b.dueDate!));
+      ..sort((a, b) => a.dueDate!.compareTo(b.dueDate!))..sort((a,b)=> a.priority < b.priority ? 1 : 0 );
 
     return futureTodos;
   }
@@ -149,7 +178,7 @@ class TodoLocalDataSourceImpl implements TodoLocalDataSource {
   @override
   Future<List<TodoModel>> getAllTodos() async {
     // Load todos with their relationships - this is like doing a JOIN in SQL
-    return await isar.todoModels.where().sortByCreatedAtDesc().findAll();
+    return isar.todoModels.where().sortByPriorityDesc().findAll();
   }
 
   @override
@@ -194,29 +223,5 @@ class TodoLocalDataSourceImpl implements TodoLocalDataSource {
       await todo.subtodos.save();
       await todo.reminders.save();
     });
-  }
-
-  @override
-  Future<List<TodoModel>> filterTodosByPriorityCompleated(int priority) async {
-    return await isar.writeTxn(() => isar.todoModels
-        .filter()
-        .isCompletedEqualTo(true)
-        .and()
-        .priorityEqualTo(priority)
-        .findAll());
-  }
-
-  @override
-  Future<List<TodoModel>> filterTodosByPriorityDueDated(int priority) async {
-    // return futureTodos;
-    final now = DateTime.now();
-    final todosPriorityDueDated =
-        await isar.todoModels.filter().dueDateIsNotNull().and().priorityEqualTo(priority).findAll();
-    final List<TodoModel> futureTodosPriority = todosPriorityDueDated
-        .where((todo) =>
-            todo.dueDate != null && todo.isCompleted == false && todo.dueDate!.isAfter(now))
-        .toList()..sort((a,b)=> a.dueDate!.compareTo(b.dueDate!));
-
-    return futureTodosPriority;
   }
 }
