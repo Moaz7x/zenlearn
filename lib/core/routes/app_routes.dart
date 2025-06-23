@@ -40,7 +40,7 @@ import '../../features/pomodoro/presentation/pages/pomodoro_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/todo/presentation/pages/edit_todo_page.dart';
 import '../../features/todo/presentation/pages/todo_detail_page.dart';
-import '../../features/todo/presentation/pages/todos_page.dart';
+import '../../features/todo/presentation/pages/todo_list_page.dart';
 import '../../features/youtube_browser/presentation/pages/youtube_download_page.dart';
 import '../../features/youtube_browser/presentation/pages/youtube_to_transcript_page.dart';
 
