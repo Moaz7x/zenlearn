@@ -1,6 +1,9 @@
 // lib/features/todo/presentation/widgets/todo_tile.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zenlearn/core/widgets/custom_checkbox.dart';
+import 'package:zenlearn/features/todo/presentation/bloc/todo_bloc.dart';
+import 'package:zenlearn/features/todo/presentation/bloc/todo_state.dart';
 
 import '../../domain/entities/todo_entity.dart';
 
@@ -37,9 +40,16 @@ class TodoTile extends StatelessWidget {
           BoxDecoration(color: getColor(todo.priority), borderRadius: BorderRadius.circular(20)),
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: CustomCheckbox(
-          value: todo.isCompleted,
-          onChanged: (_) => onToggle(),
+        leading: BlocSelector<TodoBloc, TodoState, bool>(
+          selector: (state) {
+            return todo.isCompleted;
+          },
+          builder: (context, state) {
+            return CustomCheckbox(
+              value: todo.isCompleted,
+              onChanged: (_) => onToggle(),
+            );
+          },
         ),
         title: Column(
           mainAxisAlignment: MainAxisAlignment.start,

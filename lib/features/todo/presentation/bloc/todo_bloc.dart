@@ -285,7 +285,10 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
       final todos = await getAllTodos(NoParams());
 
       emit(TodoLoaded(todos));
+      
       emit(TodoOperationSuccess('Todo status updated'));
+      add(LoadCompletedTodos());
+      add(LoadDueDatedTodos());
       add(LoadTodos());
     } catch (e) {
       emit(TodoError('Failed to toggle todo completion: ${e.toString()}'));

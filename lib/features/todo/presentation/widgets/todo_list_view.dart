@@ -6,6 +6,7 @@ import 'package:zenlearn/features/todo/presentation/bloc/todo_bloc.dart';
 import 'package:zenlearn/features/todo/presentation/bloc/todo_event.dart';
 import 'package:zenlearn/features/todo/presentation/pages/edit_todo_page.dart';
 import 'package:zenlearn/features/todo/presentation/pages/todo_detail_page.dart';
+import 'package:zenlearn/features/todo/presentation/widgets/delete_todo_dialog.dart';
 import 'package:zenlearn/features/todo/presentation/widgets/todo_tile.dart';
 
 class TodoListView extends StatelessWidget {
@@ -140,7 +141,9 @@ class TodoListView extends StatelessWidget {
                         final todoBloc = context.read<TodoBloc>();
                         return TodoTile(
                           todo: todo,
-                          onDelete: () => todoBloc.add(DeleteTodoRequested(todo.id!)),
+                          onDelete: () => showDeleteTodoDialog(context, todo.id!, todo.title, () {
+                            todoBloc.add(DeleteTodoRequested(todo.id!));
+                          }),
                           onEdit: () {
                             Navigator.push(
                               context,
@@ -151,7 +154,9 @@ class TodoListView extends StatelessWidget {
                               ),
                             );
                           },
-                          onToggle: () => todoBloc.add(ToggleTodoCompletion(todo.id!)),
+                          onToggle: () {
+                            todoBloc.add(ToggleTodoCompletion(todo.id!));
+                          },
                           onView: () {
                             Navigator.push(
                               context,
