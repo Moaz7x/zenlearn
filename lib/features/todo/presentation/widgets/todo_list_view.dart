@@ -75,7 +75,7 @@ class TodoListView extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: onPressedPriority1,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade100, // Example color
+                      backgroundColor: Colors.lightBlueAccent, // Example color
                     ),
                     child: Text(localizations.translate('priority_1')),
                   ),
@@ -85,7 +85,7 @@ class TodoListView extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: onPressedPriority2,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange.shade100, // Example color
+                      backgroundColor: Colors.deepOrangeAccent, // Example color
                     ),
                     child: Text(localizations.translate('priority_2')),
                   ),
@@ -95,7 +95,7 @@ class TodoListView extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: onPressedPriority3,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.yellow.shade100, // Example color
+                      backgroundColor: Colors.pinkAccent, // Example color
                     ),
                     child: Text(localizations.translate('priority_3')),
                   ),
