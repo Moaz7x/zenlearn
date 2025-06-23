@@ -1,0 +1,95 @@
+Here's the BlocBuilder you can use in your TodoListPage to show a carousel (PageView) with all todos, completed todos, and due-dated todos:
+
+dart
+Copy
+Edit
+BlocBuilder<TodoBloc, TodoState>(
+  buildWhen: (previous, current) =>
+      current is TodoLoaded ||
+      current is CompletedTodosLoaded ||
+      current is DueDatedTodosLoaded ||
+      current is TodoInitial ||
+      current is TodoLoading,
+  builder: (context, state) {
+    if (state is TodoLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return PageView(
+      onPageChanged: (index) {
+        switch (index) {
+          case 0:
+            context.read<TodoBloc>().add(LoadTodos());
+            break;
+          case 1:
+            context.read<TodoBloc>().add(LoadCompletedTodos());
+            break;
+          case 2:
+            context.read<TodoBloc>().add(LoadDueDatedTodos());
+            break;
+        }
+      },
+      children: [
+        // All Todos
+        _TodoListView(
+          title: 'All Todos',
+          todos: state is TodoLoaded ? state.todos : [],
+        ),
+        // Completed Todos
+        _TodoListView(
+          title: 'Completed',
+          todos: state is CompletedTodosLoaded ? state.todos : [],
+        ),
+        // Due-dated Todos
+        _TodoListView(
+          title: 'Due Dated',
+          todos: state is DueDatedTodosLoaded ? state.todos : [],
+        ),
+      ],
+    );
+  },
+);
+Create _TodoListView widget like this:
+
+dart
+Copy
+Edit
+class _TodoListView extends StatelessWidget {
+  final String title;
+  final List<TodoEntity> todos;
+
+  const _TodoListView({
+    required this.title,
+    required this.todos,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (todos.isEmpty) {
+      return Center(child: Text('No $title'));
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: todos.length,
+      itemBuilder: (context, index) {
+        final todo = todos[index];
+        return TodoTile(
+          todo: todo,
+          onToggle: () =>
+              context.read<TodoBloc>().add(ToggleTodoCompletion(todo.id!)),
+          onEdit: () {
+            // your edit logic
+          },
+          onDelete: () {
+            // your delete logic
+          },
+          onView: () {
+            // your view logic
+          },
+        );
+      },
+    );
+  }
+}
+You can now replace your current BlocBuilder inside body: with this one to implement the carousel view. Let me know if you want to add a bottom navigation or a swipe indicator to make switching more intuitive.
