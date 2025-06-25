@@ -75,11 +75,11 @@ class ChangeNoteColorEvent extends NotesEvent {
   @override
   List<Object> get props => [note, newColor];
 }
+class GetNoteByIdEvent extends NotesEvent {
+  final String noteId;
 
-// You can add more specific events as needed, for example:
-// class GetNoteByIdEvent extends NotesEvent {
-//   final String noteId;
-//   const GetNoteByIdEvent({required this.noteId});
-//   @override
-//   List<Object> get props => [noteId];
-// }
+  const GetNoteByIdEvent({required this.noteId});
+
+  @override
+  List<Object> get props => [noteId];
+}

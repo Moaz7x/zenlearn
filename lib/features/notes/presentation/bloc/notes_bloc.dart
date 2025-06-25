@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart'; // For generating unique IDs for new notes
 import '../../../../core/usecases/usecase.dart'; // For NoParams
 import '../../domain/usecases/create_note.dart';
 import '../../domain/usecases/delete_note.dart';
+import '../../domain/usecases/get_note_by_id.dart';
 import '../../domain/usecases/get_notes.dart';
 import '../../domain/usecases/search_notes.dart';
 import '../../domain/usecases/update_note.dart';
@@ -16,10 +17,12 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
   final UpdateNote updateNoteUseCase;
   final DeleteNote deleteNoteUseCase;
   final SearchNotes searchNotesUseCase;
+final GetNoteById getNoteByIdUseCase; // NEW: Add GetNoteById use case
 
   NotesBloc({
     required this.createNoteUseCase,
     required this.getNotesUseCase,
+     required this.getNoteByIdUseCase, // NEW: Add to constructor
     required this.updateNoteUseCase,
     required this.deleteNoteUseCase,
     required this.searchNotesUseCase,
@@ -31,6 +34,17 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     on<SearchNotesEvent>(_onSearchNotes);
     on<TogglePinNoteEvent>(_onTogglePinNote);
     on<ChangeNoteColorEvent>(_onChangeNoteColor);
+    on<GetNoteByIdEvent>(_onGetNoteById); // NEW: Add handler for GetNoteByIdEvent
+  
+  }
+
+  Future<void> _onGetNoteById(GetNoteByIdEvent event, Emitter<NotesState> emit) async {
+    emit(const NotesLoading()); // Or a more specific state like NoteLoadingById
+    final result = await getNoteByIdUseCase(GetNoteByIdParams(id: event.noteId));
+    result.fold(
+      (failure) => emit(NotesError(failure: failure)),
+      (note) => emit(NoteLoadedById(note: note)),
+    );
   }
 
   Future<void> _onChangeNoteColor(ChangeNoteColorEvent event, Emitter<NotesState> emit) async {

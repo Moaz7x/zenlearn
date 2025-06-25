@@ -84,3 +84,11 @@ class NoteUpdatedSuccess extends NotesState {
   @override
   List<Object> get props => [note];
 }
+class NoteLoadedById extends NotesState {
+  final NoteEntity note;
+
+  const NoteLoadedById({required this.note});
+
+  @override
+  List<Object> get props => [note];
+}
