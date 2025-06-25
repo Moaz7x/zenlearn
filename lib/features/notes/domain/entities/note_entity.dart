@@ -11,6 +11,7 @@ class NoteEntity extends Equatable {
   final bool isPinned;
   final int? color; // Represents a color value, e.g., ARGB integer
   final List<String>? tags;
+  final int? order; // NEW: Add order field
 
   const NoteEntity({
     required this.id,
@@ -21,6 +22,7 @@ class NoteEntity extends Equatable {
     this.isPinned = false,
     this.color,
     this.tags,
+    this.order, // NEW: Add order to constructor
   });
 
   /// Creates a copy of this NoteEntity with the given fields replaced with the new values.
@@ -33,6 +35,7 @@ class NoteEntity extends Equatable {
     bool? isPinned,
     int? color,
     List<String>? tags,
+    int? order, // NEW: Add order to copyWith
   }) {
     return NoteEntity(
       id: id ?? this.id,
@@ -43,6 +46,7 @@ class NoteEntity extends Equatable {
       isPinned: isPinned ?? this.isPinned,
       color: color ?? this.color,
       tags: tags ?? this.tags,
+      order: order ?? this.order, // NEW: Assign order
     );
   }
 
@@ -56,5 +60,8 @@ class NoteEntity extends Equatable {
         isPinned,
         color,
         tags,
+        order, // NEW: Add order to props
       ];
 }
+
+

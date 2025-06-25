@@ -77,6 +77,12 @@ class _NoteCardState extends State<NoteCard> with SingleTickerProviderStateMixin
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          Icon(
+                            Icons.drag_handle,
+                            color: Colors.grey[400],
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
                           AnimatedSwitcher(
                             duration: const Duration(milliseconds: 200),
                             child: IconButton(

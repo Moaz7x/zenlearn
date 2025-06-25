@@ -17,7 +17,6 @@ class NotesPage extends StatefulWidget {
 }
 
 class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderStateMixin {
-  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
   final List<NoteEntity> _notes = [];
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;
@@ -169,15 +168,24 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
                 ),
               );
             }
-            return AnimatedList(
-              key: _listKey,
-              initialItemCount: _notes.length,
-              padding: const EdgeInsets.only(top: 8.0, bottom: 80.0),
-              itemBuilder: (context, index, animation) {
-                if (index >= _notes.length) return const SizedBox.shrink();
-                return _buildNoteItem(_notes[index], animation);
-              },
-            );
+            return BlocBuilder<NotesBloc, NotesState>(
+                builder: (context, state) => state is NotesLoaded
+                    ? ReorderableListView.builder(
+                        padding: const EdgeInsets.only(top: 8.0, bottom: 80.0),
+                        itemCount: _notes.length,
+                        onReorder: (oldIndex, newIndex) {
+                          context.read<NotesBloc>().add(ReorderNotesEvent(
+                                notes: state.notes,
+                                oldIndex: oldIndex,
+                                newIndex: newIndex > oldIndex ? newIndex - 1 : newIndex,
+                              ));
+                        },
+                        itemBuilder: (context, index) {
+                          if (index >= _notes.length) return const SizedBox.shrink();
+                          return _buildNoteItem(_notes[index], index);
+                        },
+                      )
+                    : ListView());
           } else if (state is NotesError) {
             return Center(
               child: Column(
@@ -278,25 +286,18 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
     });
   }
 
-  Widget _buildNoteItem(NoteEntity note, Animation<double> animation) {
-    return SlideTransition(
-      position: animation.drive(
-        Tween<Offset>(
-          begin: const Offset(1.0, 0.0),
-          end: Offset.zero,
-        ).chain(CurveTween(curve: Curves.easeOut)),
-      ),
-      child: FadeTransition(
-        opacity: animation,
-        child: NoteCard(
-          note: note,
-          onTap: () {
-            context.go('/notes/view/${note.id}');
-          },
-          onTogglePin: () {
-            context.read<NotesBloc>().add(TogglePinNoteEvent(note: note));
-          },
-        ),
+  Widget _buildNoteItem(NoteEntity note, int index) {
+    return Container(
+      key: ValueKey(note.id),
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      child: NoteCard(
+        note: note,
+        onTap: () {
+          context.go('/notes/view/${note.id}');
+        },
+        onTogglePin: () {
+          context.read<NotesBloc>().add(TogglePinNoteEvent(note: note));
+        },
       ),
     );
   }
@@ -306,40 +307,9 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
   }
 
   void _updateNotesList(List<NoteEntity> newNotes) {
-    final oldNotes = List<NoteEntity>.from(_notes);
-
-    // Find notes that were added
-    for (int i = 0; i < newNotes.length; i++) {
-      final note = newNotes[i];
-      if (!oldNotes.any((oldNote) => oldNote.id == note.id)) {
-        _notes.insert(i, note);
-        _listKey.currentState?.insertItem(i, duration: const Duration(milliseconds: 300));
-      }
-    }
-
-    // Find notes that were removed
-    for (int i = oldNotes.length - 1; i >= 0; i--) {
-      final oldNote = oldNotes[i];
-      if (!newNotes.any((note) => note.id == oldNote.id)) {
-        final removedNote = _notes.removeAt(i);
-        _listKey.currentState?.removeItem(
-          i,
-          (context, animation) => _buildNoteItem(removedNote, animation),
-          duration: const Duration(milliseconds: 300),
-        );
-      }
-    }
-
-    // Update existing notes (for pin status changes, etc.)
-    for (int i = 0; i < _notes.length; i++) {
-      final currentNote = _notes[i];
-      final updatedNote = newNotes.firstWhere(
-        (note) => note.id == currentNote.id,
-        orElse: () => currentNote,
-      );
-      if (updatedNote != currentNote) {
-        _notes[i] = updatedNote;
-      }
-    }
+    setState(() {
+      _notes.clear();
+      _notes.addAll(newNotes);
+    });
   }
 }

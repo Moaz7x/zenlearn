@@ -7,13 +7,6 @@ part 'note_model.g.dart';
 
 @Collection()
 class NoteModel {
-  // Isar uses 'Id' for the primary key.
-  // You can use 'Id id = Isar.autoIncrement;' for auto-incrementing IDs.
-  // Or, if you want to use a custom String ID from NoteEntity, you'd map it.
-  // For simplicity and to match NoteEntity's String ID, we'll use a hash for Isar's int Id.
-  // Or, if NoteEntity's ID is truly unique and can be converted to int, use that.
-  // Let's assume NoteEntity's ID is a UUID string, so we'll use Isar.autoIncrement for Isar's internal ID
-  // and store the NoteEntity's ID as a separate field.
   Id isarId = Isar.autoIncrement; // Internal Isar ID
 
   @Index(unique: true) // Ensure the 'id' from NoteEntity is unique
@@ -26,6 +19,7 @@ class NoteModel {
   bool isPinned;
   int? color; // Stored as an integer (e.g., ARGB value)
   List<String>? tags; // Isar supports List<String> directly
+  late int? order; // NEW: Add order field
 
   NoteModel({
     required this.id,
@@ -36,6 +30,7 @@ class NoteModel {
     this.isPinned = false,
     this.color,
     this.tags,
+    this.order, // NEW: Add order to constructor
   });
 
   /// Factory constructor to create a [NoteModel] from a [NoteEntity].
@@ -49,6 +44,7 @@ class NoteModel {
       isPinned: entity.isPinned,
       color: entity.color,
       tags: entity.tags,
+      order: entity.order, // NEW: Assign order from entity
     );
   }
 
@@ -63,6 +59,9 @@ class NoteModel {
       isPinned: isPinned,
       color: color,
       tags: tags,
+      order: order, // NEW: Assign order to entity
     );
   }
 }
+
+

@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart'; // For generating unique IDs for new notes
 
 import '../../../../core/usecases/usecase.dart'; // For NoParams
+import '../../domain/entities/note_entity.dart';
 import '../../domain/usecases/create_note.dart';
 import '../../domain/usecases/delete_note.dart';
 import '../../domain/usecases/get_note_by_id.dart';
@@ -35,6 +36,7 @@ final GetNoteById getNoteByIdUseCase; // NEW: Add GetNoteById use case
     on<TogglePinNoteEvent>(_onTogglePinNote);
     on<ChangeNoteColorEvent>(_onChangeNoteColor);
     on<GetNoteByIdEvent>(_onGetNoteById); // NEW: Add handler for GetNoteByIdEvent
+    on<ReorderNotesEvent>(_onReorderNotes); // NEW: Add handler for ReorderNotesEvent
   
   }
 
@@ -135,3 +137,31 @@ final GetNoteById getNoteByIdUseCase; // NEW: Add GetNoteById use case
     add(const LoadNotes());
   }
 }
+
+  Future<void> _onReorderNotes(ReorderNotesEvent event, Emitter<NotesState> emit) async {
+    
+      final notes = List<NoteEntity>.from(event.notes);
+      
+      // Separate pinned and unpinned notes
+      final pinnedNotes = notes.where((note) => note.isPinned).toList();
+      final unpinnedNotes = notes.where((note) => !note.isPinned).toList();
+      
+      // Determine which list to reorder
+      if (event.oldIndex < pinnedNotes.length && event.newIndex < pinnedNotes.length) {
+        // Reordering within pinned notes
+        final note = pinnedNotes.removeAt(event.oldIndex);
+        pinnedNotes.insert(event.newIndex, note);
+      } else if (event.oldIndex >= pinnedNotes.length && event.newIndex >= pinnedNotes.length) {
+        // Reordering within unpinned notes
+        final adjustedOldIndex = event.oldIndex - pinnedNotes.length;
+        final adjustedNewIndex = event.newIndex - pinnedNotes.length;
+        final note = unpinnedNotes.removeAt(adjustedOldIndex);
+        unpinnedNotes.insert(adjustedNewIndex, note);
+      }
+      
+      // Combine the lists back together
+      final reorderedNotes = [...pinnedNotes, ...unpinnedNotes];
+      emit(NotesLoaded(notes: reorderedNotes));
+    
+  }
+
