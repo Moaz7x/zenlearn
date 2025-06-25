@@ -34,6 +34,7 @@ import '../../features/media_manager/presentation/pages/picture_viewer_page.dart
 import '../../features/media_manager/presentation/pages/video_viewer_page.dart';
 import '../../features/notes/domain/entities/note_entity.dart';
 import '../../features/notes/presentation/pages/add_notes_page.dart';
+import '../../features/notes/presentation/pages/note_view.dart';
 import '../../features/notes/presentation/pages/notes_page.dart';
 // Missing imports that need to be added:
 import '../../features/pomodoro/presentation/pages/pomodoro_page.dart';
@@ -45,6 +46,7 @@ import '../../features/youtube_browser/presentation/pages/youtube_download_page.
 import '../../features/youtube_browser/presentation/pages/youtube_to_transcript_page.dart';
 
 part '../widgets/custom_drawer.dart';
+final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
 class AppRouter {
   static final GoRouter _router = GoRouter(
@@ -69,23 +71,31 @@ class AppRouter {
         },
       ),
       // --- Top-Level Feature Entry Routes with Nested Routes ---
-      GoRoute(
-          path: '/notes',
-          builder: (BuildContext context, GoRouterState state) {
-            return const NotesPage(); // Main Notes Page (list/folders)
-          },
-          routes: [
-            GoRoute(
-              path: 'add', // Path relative to /notes -> /notes/add
-              builder: (context, state) => const AddNotesPage(),
-            ),
-            GoRoute(
-                path: 'view/:noteId', // Path relative to /notes -> /notes/view/:noteId
-                builder: (context, state) {
-                  final NoteEntity? existingNote = state.extra as NoteEntity?;
-                  return AddNotesPage(existingNote: existingNote);
-                }),
-          ]),
+     GoRoute(
+        path: '/notes',
+        builder: (BuildContext context, GoRouterState state) {
+          return const NotesPage(); // Main Notes Page (list/folders)
+        },
+        routes: [
+          GoRoute(
+            path: 'add', // Path relative to /notes -> /notes/add
+            builder: (context, state) {
+              final NoteEntity? existingNote = state.extra as NoteEntity?;
+              return AddNotesPage(existingNote: existingNote);
+            },
+          ),
+          GoRoute(
+            path: 'view/:noteId', // Path relative to /notes -> /notes/view/:noteId
+            builder: (context, state) {
+              final noteId = state.pathParameters['noteId'];
+              if (noteId == null) {
+                return const Text('Error: Note ID is missing');
+              }
+              return NoteViewPage(noteId: noteId);
+            },
+          ),
+        ],
+      ),
       GoRoute(
           path: '/quizzes',
           builder: (BuildContext context, GoRouterState state) {
@@ -292,6 +302,7 @@ class AppRouter {
         },
       ),
     ],
+      observers: [routeObserver],
     // Add errorPageBuilder, redirect, etc. as needed
   );
 
