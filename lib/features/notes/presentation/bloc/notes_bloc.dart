@@ -18,12 +18,12 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
   final UpdateNote updateNoteUseCase;
   final DeleteNote deleteNoteUseCase;
   final SearchNotes searchNotesUseCase;
-final GetNoteById getNoteByIdUseCase; // NEW: Add GetNoteById use case
+  final GetNoteById getNoteByIdUseCase; // NEW: Add GetNoteById use case
 
   NotesBloc({
     required this.createNoteUseCase,
     required this.getNotesUseCase,
-     required this.getNoteByIdUseCase, // NEW: Add to constructor
+    required this.getNoteByIdUseCase, // NEW: Add to constructor
     required this.updateNoteUseCase,
     required this.deleteNoteUseCase,
     required this.searchNotesUseCase,
@@ -37,18 +37,7 @@ final GetNoteById getNoteByIdUseCase; // NEW: Add GetNoteById use case
     on<ChangeNoteColorEvent>(_onChangeNoteColor);
     on<GetNoteByIdEvent>(_onGetNoteById); // NEW: Add handler for GetNoteByIdEvent
     on<ReorderNotesEvent>(_onReorderNotes); // NEW: Add handler for ReorderNotesEvent
-  
   }
-
-  Future<void> _onGetNoteById(GetNoteByIdEvent event, Emitter<NotesState> emit) async {
-    emit(const NotesLoading()); // Or a more specific state like NoteLoadingById
-    final result = await getNoteByIdUseCase(GetNoteByIdParams(id: event.noteId));
-    result.fold(
-      (failure) => emit(NotesError(failure: failure)),
-      (note) => emit(NoteLoadedById(note: note)),
-    );
-  }
-
   Future<void> _onChangeNoteColor(ChangeNoteColorEvent event, Emitter<NotesState> emit) async {
     // Create a new NoteEntity with the updated color
     final updatedNote = event.note.copyWith(color: event.newColor);
@@ -69,7 +58,7 @@ final GetNoteById getNoteByIdUseCase; // NEW: Add GetNoteById use case
     // Ensure the note has a unique ID and creation timestamp if not already set
     final newNote = event.note.copyWith(
       id: event.note.id.isEmpty ? const Uuid().v4() : event.note.id,
-      createdAt: event.note.createdAt ,
+      createdAt: event.note.createdAt,
     );
 
     final result = await createNoteUseCase(CreateNoteParams(note: newNote));
@@ -92,6 +81,15 @@ final GetNoteById getNoteByIdUseCase; // NEW: Add GetNoteById use case
     add(const LoadNotes());
   }
 
+  Future<void> _onGetNoteById(GetNoteByIdEvent event, Emitter<NotesState> emit) async {
+    emit(const NotesLoading()); // Or a more specific state like NoteLoadingById
+    final result = await getNoteByIdUseCase(GetNoteByIdParams(id: event.noteId));
+    result.fold(
+      (failure) => emit(NotesError(failure: failure)),
+      (note) => emit(NoteLoadedById(note: note)),
+    );
+  }
+
   Future<void> _onLoadNotes(LoadNotes event, Emitter<NotesState> emit) async {
     emit(const NotesLoading());
     final result = await getNotesUseCase(NoParams());
@@ -99,6 +97,39 @@ final GetNoteById getNoteByIdUseCase; // NEW: Add GetNoteById use case
       (failure) => emit(NotesError(failure: failure)),
       (notes) => emit(NotesLoaded(notes: notes)),
     );
+  }
+
+  Future<void> _onReorderNotes(ReorderNotesEvent event, Emitter<NotesState> emit) async {
+    final notes = List<NoteEntity>.from(event.notes);
+
+    // Separate pinned and unpinned notes
+    final pinnedNotes = notes.where((note) => note.isPinned).toList();
+    final unpinnedNotes = notes.where((note) => !note.isPinned).toList();
+
+    // Determine which list to reorder
+    if (event.oldIndex < pinnedNotes.length && event.newIndex < pinnedNotes.length) {
+      // Reordering within pinned notes
+      final note = pinnedNotes.removeAt(event.oldIndex);
+      pinnedNotes.insert(event.newIndex, note);
+    } else if (event.oldIndex >= pinnedNotes.length && event.newIndex >= pinnedNotes.length) {
+      // Reordering within unpinned notes
+      final adjustedOldIndex = event.oldIndex - pinnedNotes.length;
+      final adjustedNewIndex = event.newIndex - pinnedNotes.length;
+      final note = unpinnedNotes.removeAt(adjustedOldIndex);
+      unpinnedNotes.insert(adjustedNewIndex, note);
+    }
+
+    // Combine the lists back together
+    final reorderedNotes = [...pinnedNotes, ...unpinnedNotes];
+
+    // Update the order property of each note and save to database
+    for (int i = 0; i < reorderedNotes.length; i++) {
+      final noteToUpdate = reorderedNotes[i].copyWith(order: i);
+      await updateNoteUseCase(UpdateNoteParams(note: noteToUpdate));
+    }
+
+    // Reload all notes to ensure the UI reflects the persisted order
+    add(const LoadNotes());
   }
 
   Future<void> _onSearchNotes(SearchNotesEvent event, Emitter<NotesState> emit) async {
@@ -137,31 +168,3 @@ final GetNoteById getNoteByIdUseCase; // NEW: Add GetNoteById use case
     add(const LoadNotes());
   }
 }
-
-  Future<void> _onReorderNotes(ReorderNotesEvent event, Emitter<NotesState> emit) async {
-    
-      final notes = List<NoteEntity>.from(event.notes);
-      
-      // Separate pinned and unpinned notes
-      final pinnedNotes = notes.where((note) => note.isPinned).toList();
-      final unpinnedNotes = notes.where((note) => !note.isPinned).toList();
-      
-      // Determine which list to reorder
-      if (event.oldIndex < pinnedNotes.length && event.newIndex < pinnedNotes.length) {
-        // Reordering within pinned notes
-        final note = pinnedNotes.removeAt(event.oldIndex);
-        pinnedNotes.insert(event.newIndex, note);
-      } else if (event.oldIndex >= pinnedNotes.length && event.newIndex >= pinnedNotes.length) {
-        // Reordering within unpinned notes
-        final adjustedOldIndex = event.oldIndex - pinnedNotes.length;
-        final adjustedNewIndex = event.newIndex - pinnedNotes.length;
-        final note = unpinnedNotes.removeAt(adjustedOldIndex);
-        unpinnedNotes.insert(adjustedNewIndex, note);
-      }
-      
-      // Combine the lists back together
-      final reorderedNotes = [...pinnedNotes, ...unpinnedNotes];
-      emit(NotesLoaded(notes: reorderedNotes));
-    
-  }
-
