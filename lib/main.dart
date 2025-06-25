@@ -11,6 +11,8 @@ import 'package:zenlearn/core/localization/language_bloc/language_bloc.dart';
 import 'package:zenlearn/core/routes/app_routes.dart';
 import 'package:zenlearn/core/services/notification_services.dart';
 import 'package:zenlearn/core/theme/theme_cubit.dart';
+// NEW: Import NotesBloc
+import 'package:zenlearn/features/notes/presentation/bloc/notes_bloc.dart';
 import 'package:zenlearn/features/todo/presentation/bloc/todo_bloc.dart';
 
 import 'di/injection_container.dart' as di;
@@ -20,8 +22,8 @@ void main() async {
   Bloc.observer = Blocserver();
   await NotiService().initNotification();
   if (!kIsWeb && Platform.isAndroid) {}
-  await di.init();
-  
+  await di.init(); // Initialize all dependencies
+
   runApp(const MyApp());
 }
 
@@ -41,6 +43,10 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => NavigationBloc()),
         BlocProvider(
           create: (context) => di.sl<TodoBloc>(),
+        ),
+        // NEW: Add NotesBloc
+        BlocProvider(
+          create: (context) => di.sl<NotesBloc>(),
         ),
       ],
       child: BlocBuilder<ThemeCubit, ThemeState>(
