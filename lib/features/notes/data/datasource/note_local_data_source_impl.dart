@@ -24,6 +24,19 @@ class NoteLocalDataSourceImpl implements NoteLocalDataSource {
   Future<List<NoteModel>> getNotes() async {
     try {
       final notes = await isar.noteModels.where().findAll();
+      
+      // Sort notes: pinned notes first (sorted by order), then unpinned notes (sorted by order)
+      notes.sort((a, b) {
+        // First, sort by pinned status (pinned notes come first)
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        
+        // If both have the same pinned status, sort by order
+        final aOrder = a.order ?? 0;
+        final bOrder = b.order ?? 0;
+        return aOrder.compareTo(bOrder);
+      });
+      
       return notes;
     } catch (e) {
       throw DatabaseException();

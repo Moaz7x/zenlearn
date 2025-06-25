@@ -5,12 +5,14 @@ class NoteCard extends StatefulWidget {
   final NoteEntity note;
   final VoidCallback onTap;
   final VoidCallback onTogglePin;
+  final VoidCallback? onLongPress;
 
   const NoteCard({
     super.key,
     required this.note,
     required this.onTap,
     required this.onTogglePin,
+    this.onLongPress,
   });
 
   @override
@@ -20,11 +22,28 @@ class NoteCard extends StatefulWidget {
 class _NoteCardState extends State<NoteCard> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
+  bool _isLongPressed = false;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: widget.onTap,
+      onLongPress: () {
+        setState(() {
+          _isLongPressed = true;
+        });
+        _animationController.forward();
+        widget.onLongPress?.call();
+        // Reset the animation after a short delay
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted) {
+            _animationController.reverse();
+            setState(() {
+              _isLongPressed = false;
+            });
+          }
+        });
+      },
       child: AnimatedBuilder(
         animation: _scaleAnimation,
         builder: (context, child) {
@@ -36,10 +55,10 @@ class _NoteCardState extends State<NoteCard> with SingleTickerProviderStateMixin
                 borderRadius: BorderRadius.circular(16.0),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8.0,
+                    color: Colors.black.withOpacity(_isLongPressed ? 0.2 : 0.1),
+                    blurRadius: _isLongPressed ? 12.0 : 8.0,
                     offset: const Offset(0, 4),
-                    spreadRadius: 0,
+                    spreadRadius: _isLongPressed ? 2.0 : 0,
                   ),
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
@@ -77,11 +96,18 @@ class _NoteCardState extends State<NoteCard> with SingleTickerProviderStateMixin
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Icon(
-                            Icons.drag_handle,
-                            color: Colors.grey[400],
-                            size: 20,
-                          ),
+                          if (_isLongPressed)
+                            Icon(
+                              Icons.open_with,
+                              color: Theme.of(context).primaryColor,
+                              size: 20,
+                            )
+                          else
+                            Icon(
+                              Icons.drag_handle,
+                              color: Colors.grey[400],
+                              size: 20,
+                            ),
                           const SizedBox(width: 8),
                           AnimatedSwitcher(
                             duration: const Duration(milliseconds: 200),
