@@ -99,7 +99,7 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     );
   }
 
-  Future<void> _onReorderNotes(ReorderNotesEvent event, Emitter<NotesState> emit) async {
+   Future<void> _onReorderNotes(ReorderNotesEvent event, Emitter<NotesState> emit) async {
     final notes = List<NoteEntity>.from(event.notes);
 
     // Separate pinned and unpinned notes
@@ -122,14 +122,31 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     // Combine the lists back together
     final reorderedNotes = [...pinnedNotes, ...unpinnedNotes];
 
+    // List to hold all update futures
+    final List<Future<void>> updateFutures = [];
+
     // Update the order property of each note and save to database
     for (int i = 0; i < reorderedNotes.length; i++) {
       final noteToUpdate = reorderedNotes[i].copyWith(order: i);
-      await updateNoteUseCase(UpdateNoteParams(note: noteToUpdate));
+      // Add the future to the list without awaiting immediately
+      updateFutures.add(updateNoteUseCase(UpdateNoteParams(note: noteToUpdate)).then((result) {
+        result.fold(
+          (failure) {
+            // يمكنك هنا التعامل مع الأخطاء الفردية لتحديث الملاحظات إذا لزم الأمر
+            // على سبيل المثال، تسجيل الخطأ:
+            print('Error updating note order for ${noteToUpdate.id}: ${failure.message}');
+          },
+          (_) {}, // النجاح، لا يلزم اتخاذ إجراء هنا
+        );
+      }));
     }
 
-    // Reload all notes to ensure the UI reflects the persisted order
-    add(const LoadNotes());
+    // انتظر حتى تكتمل جميع تحديثات قاعدة البيانات
+    await Future.wait(updateFutures);
+
+    // بدلاً من إعادة تحميل جميع الملاحظات، قم بإصدار القائمة المعاد ترتيبها مباشرة.
+    // هذا يضمن تحديث واجهة المستخدم بكفاءة دون جلب بيانات كامل.
+    emit(NotesLoaded(notes: reorderedNotes));
   }
 
   Future<void> _onSearchNotes(SearchNotesEvent event, Emitter<NotesState> emit) async {

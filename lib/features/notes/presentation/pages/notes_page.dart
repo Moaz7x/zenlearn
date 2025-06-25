@@ -351,10 +351,12 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
     context.read<NotesBloc>().add(const LoadNotes());
   }
 
+  // في _NotesPageState
   void _updateNotesList(List<NoteEntity> newNotes) {
     setState(() {
       _notes.clear();
       _notes.addAll(newNotes);
+      // من الضروري أن يتطابق ترتيب الملاحظات في _notes مع الترتيب المستلم من حالة BLoC.
     });
   }
 }

@@ -1,5 +1,4 @@
-﻿// app_text_field\n// Created: 2025-05-19\n\n
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 /// A custom input field with a split animated border on focus.
 class CustomInput extends StatefulWidget {
@@ -12,6 +11,11 @@ class CustomInput extends StatefulWidget {
   final Duration animationDuration;
   final int? maxLines;
   final int? minLines;
+  final bool? filled; // NEW: Added filled property
+  final Color? fillColor; // NEW: Added fillColor property
+  final List<BoxShadow>? boxShadow; // NEW: Added boxShadow property
+  final EdgeInsetsGeometry? contentPadding; // NEW: Added contentPadding
+
   const CustomInput({
     super.key,
     required this.hintText,
@@ -23,6 +27,10 @@ class CustomInput extends StatefulWidget {
     this.maxLines,
     this.minLines,
     this.animationDuration = const Duration(milliseconds: 1200),
+    this.filled, // NEW
+    this.fillColor, // NEW
+    this.boxShadow, // NEW
+    this.contentPadding = const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Default padding
   });
 
   @override
@@ -38,45 +46,53 @@ class _CustomInputState extends State<CustomInput> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     final OutlineInputBorder baseBorder = OutlineInputBorder(
-      borderSide: const BorderSide(color: Colors.grey, width: 1),
+      borderSide: const BorderSide(color: Colors.transparent, width: 0), // Make base border transparent
       borderRadius: BorderRadius.circular(widget.borderRadius),
     );
 
-    return Stack(
-      children: [
-        TextField(
-          controller: widget.controller,
-          focusNode: _focusNode,
-          maxLines: widget.maxLines,
-          minLines: widget.minLines,
-          decoration: InputDecoration(
-            hintText: widget.hintText,
-            hintStyle: TextStyle(color: Theme.of(context).colorScheme.tertiary), // Use theme color
-            border: baseBorder,
-            enabledBorder: baseBorder,
-            focusedBorder: baseBorder,
-            // contentPadding:
-            // const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+    return Container( // Wrap with Container to apply boxShadow and borderRadius
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(widget.borderRadius),
+        boxShadow: widget.boxShadow,
+        color: widget.filled == true ? widget.fillColor : null, // Apply fill color to container if not handled by TextField
+      ),
+      child: Stack(
+        children: [
+          TextField(
+            controller: widget.controller,
+            focusNode: _focusNode,
+            maxLines: widget.maxLines,
+            minLines: widget.minLines,
+            style: Theme.of(context).textTheme.bodyLarge, // Use theme text style
+            decoration: InputDecoration(
+              hintText: widget.hintText,
+              hintStyle: TextStyle(color: Theme.of(context).colorScheme.tertiary),
+              border: baseBorder,
+              enabledBorder: baseBorder,
+              focusedBorder: baseBorder,
+              filled: widget.filled, // Apply filled to InputDecoration
+              fillColor: widget.fillColor, // Apply fillColor to InputDecoration
+              contentPadding: widget.contentPadding, // Apply custom content padding
+            ),
           ),
-        ),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(
-              painter: _SplitOutlinePainter(
-                // Use the local painter
-                bottomAnimation: _bottomAnimation,
-                topAnimation: _topAnimation,
-                border: baseBorder,
-                bottomBorderColor: widget.bottomBorderColor ??
-                    Theme.of(context).colorScheme.secondary, // Use theme color
-                topBorderColor: widget.topBorderColor ??
-                    Theme.of(context).colorScheme.primary, // Use theme color
-                borderWidth: widget.borderWidth,
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: _SplitOutlinePainter(
+                  bottomAnimation: _bottomAnimation,
+                  topAnimation: _topAnimation,
+                  border: baseBorder,
+                  bottomBorderColor: widget.bottomBorderColor ??
+                      Theme.of(context).colorScheme.secondary,
+                  topBorderColor: widget.topBorderColor ??
+                      Theme.of(context).colorScheme.primary,
+                  borderWidth: widget.borderWidth,
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -117,8 +133,6 @@ class _CustomInputState extends State<CustomInput> with SingleTickerProviderStat
   }
 }
 
-// Duplicated SplitOutlinePainter for CustomInput
-// Consider moving this to a shared utility file if used by more widgets
 class _SplitOutlinePainter extends CustomPainter {
   final Animation<double> bottomAnimation;
   final Animation<double> topAnimation;

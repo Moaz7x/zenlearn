@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart'; // NEW: Import go_router
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:zenlearn/features/notes/presentation/bloc/notes_bloc.dart';
 import 'package:zenlearn/features/notes/presentation/bloc/notes_events.dart';
 import 'package:zenlearn/features/notes/presentation/bloc/notes_states.dart';
-// import 'package:zenlearn/features/notes/presentation/pages/add_notes_page.dart'; // No direct import needed if using GoRouter
 
 class NoteViewPage extends StatefulWidget {
   final String noteId; // Changed to receive noteId
@@ -16,59 +15,11 @@ class NoteViewPage extends StatefulWidget {
   State<NoteViewPage> createState() => _NoteViewPageState();
 }
 
-class _NoteViewPageState extends State<NoteViewPage> 
-    with TickerProviderStateMixin {
+class _NoteViewPageState extends State<NoteViewPage> with TickerProviderStateMixin {
   late AnimationController _fadeAnimationController;
   late AnimationController _slideAnimationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    
-    // Initialize animations
-    _fadeAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _slideAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeAnimationController,
-      curve: Curves.easeOut,
-    ));
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0.0, 0.2),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideAnimationController,
-      curve: Curves.easeOutCubic,
-    ));
-    
-    // Dispatch event to load the specific note
-    context.read<NotesBloc>().add(GetNoteByIdEvent(noteId: widget.noteId));
-    
-    // Start animations
-    Future.delayed(const Duration(milliseconds: 100), () {
-      _fadeAnimationController.forward();
-      _slideAnimationController.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _fadeAnimationController.dispose();
-    _slideAnimationController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,26 +33,18 @@ class _NoteViewPageState extends State<NoteViewPage>
           BlocBuilder<NotesBloc, NotesState>(
             builder: (context, state) {
               if (state is NoteLoadedById) {
-                return Container(
-                  margin: const EdgeInsets.only(right: 8.0),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12.0),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.blue.withOpacity(0.3),
-                        blurRadius: 8.0,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
                   child: IconButton(
                     icon: const Icon(Icons.edit),
                     style: IconButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).primaryColor, // Use primary color
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12.0),
                       ),
+                      elevation: 4.0, // Added subtle elevation
+                      shadowColor: Theme.of(context).primaryColor.withOpacity(0.3),
                     ),
                     onPressed: () {
                       // Navigate to AddNotesPage for editing, passing the note as extra
@@ -116,18 +59,8 @@ class _NoteViewPageState extends State<NoteViewPage>
           BlocBuilder<NotesBloc, NotesState>(
             builder: (context, state) {
               if (state is NoteLoadedById) {
-                return Container(
-                  margin: const EdgeInsets.only(right: 16.0),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12.0),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.red.withOpacity(0.3),
-                        blurRadius: 8.0,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+                return Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
                   child: IconButton(
                     icon: const Icon(Icons.delete),
                     style: IconButton.styleFrom(
@@ -136,6 +69,8 @@ class _NoteViewPageState extends State<NoteViewPage>
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12.0),
                       ),
+                      elevation: 4.0, // Added subtle elevation
+                      shadowColor: Colors.red.withOpacity(0.3),
                     ),
                     onPressed: () {
                       _confirmDelete(context, state.note.id);
@@ -196,6 +131,32 @@ class _NoteViewPageState extends State<NoteViewPage>
             return const Center(child: CircularProgressIndicator());
           } else if (state is NoteLoadedById) {
             final note = state.note;
+
+            // Determine the background color for the note card
+            final Color baseCardColor = Theme.of(context).cardColor;
+            final Color noteDisplayColor =
+                note.color != null ? Color(note.color!) : Colors.transparent;
+
+            // Blend the note's color with the base card color for a subtle tint
+            final Color blendedNoteBgColor = Color.alphaBlend(
+              noteDisplayColor.withOpacity(0.2), // 20% of the note's color
+              baseCardColor,
+            );
+
+            // Determine title text color based on note's color luminance for readability
+            Color titleTextColor;
+            if (note.color != null) {
+              final Color actualNoteColor = Color(note.color!);
+              if (ThemeData.estimateBrightnessForColor(actualNoteColor) == Brightness.light) {
+                titleTextColor = Colors.black87; // Use dark text for light colors
+              } else {
+                titleTextColor = Colors.white; // Use light text for dark colors
+              }
+            } else {
+              titleTextColor = Theme.of(context).textTheme.headlineMedium?.color ??
+                  Colors.black; // Default theme text color
+            }
+
             return FadeTransition(
               opacity: _fadeAnimation,
               child: SlideTransition(
@@ -203,21 +164,13 @@ class _NoteViewPageState extends State<NoteViewPage>
                 child: Container(
                   margin: const EdgeInsets.all(16.0),
                   decoration: BoxDecoration(
-                    color: note.color != null 
-                        ? Color(note.color!).withOpacity(0.1) 
-                        : Theme.of(context).cardColor,
+                    color: blendedNoteBgColor, // Use the blended background color
                     borderRadius: BorderRadius.circular(20.0),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 20.0,
-                        offset: const Offset(0, 8),
-                        spreadRadius: 0,
-                      ),
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 40.0,
-                        offset: const Offset(0, 16),
+                        color: Colors.black.withOpacity(0.08), // Softer shadow
+                        blurRadius: 15.0, // Reduced blur
+                        offset: const Offset(0, 6),
                         spreadRadius: 0,
                       ),
                     ],
@@ -234,20 +187,21 @@ class _NoteViewPageState extends State<NoteViewPage>
                             note.title.isNotEmpty ? note.title : 'ملاحظة بدون عنوان',
                             key: ValueKey(note.title),
                             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: note.color != null 
-                                  ? Color(note.color!) 
-                                  : Theme.of(context).primaryColor,
-                            ),
+                                  fontWeight: FontWeight.bold,
+                                  color: titleTextColor, // Use adaptive title text color
+                                ),
                           ),
                         ),
                         const SizedBox(height: 16),
-                        
+
                         // Date information with enhanced styling
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
                           decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.1),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceVariant
+                                .withOpacity(0.5), // Use theme surface variant
                             borderRadius: BorderRadius.circular(12.0),
                           ),
                           child: Column(
@@ -258,14 +212,15 @@ class _NoteViewPageState extends State<NoteViewPage>
                                   Icon(
                                     Icons.access_time,
                                     size: 16,
-                                    color: Colors.grey[600],
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.color, // Use theme text color
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     'تم الإنشاء: ${DateFormat('yyyy-MM-dd HH:mm').format(note.createdAt)}',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Colors.grey[600],
-                                    ),
+                                    style: Theme.of(context).textTheme.bodySmall,
                                   ),
                                 ],
                               ),
@@ -276,14 +231,15 @@ class _NoteViewPageState extends State<NoteViewPage>
                                     Icon(
                                       Icons.edit,
                                       size: 16,
-                                      color: Colors.grey[600],
+                                      color: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.color, // Use theme text color
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
                                       'آخر تحديث: ${DateFormat('yyyy-MM-dd HH:mm').format(note.updatedAt!)}',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: Colors.grey[600],
-                                      ),
+                                      style: Theme.of(context).textTheme.bodySmall,
                                     ),
                                   ],
                                 ),
@@ -292,17 +248,19 @@ class _NoteViewPageState extends State<NoteViewPage>
                           ),
                         ),
                         const SizedBox(height: 24),
-                        
+
                         // Note content with enhanced styling
                         Expanded(
                           child: Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(16.0),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.7),
+                              color: Theme.of(context).cardColor, // Use theme card color
                               borderRadius: BorderRadius.circular(16.0),
                               border: Border.all(
-                                color: Colors.grey.withOpacity(0.2),
+                                color: Theme.of(context)
+                                    .dividerColor
+                                    .withOpacity(0.5), // Subtle border
                                 width: 1,
                               ),
                             ),
@@ -313,11 +271,14 @@ class _NoteViewPageState extends State<NoteViewPage>
                                   note.content.isNotEmpty ? note.content : 'لا يوجد محتوى',
                                   key: ValueKey(note.content),
                                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    height: 1.6,
-                                    color: note.content.isNotEmpty 
-                                        ? Colors.black87 
-                                        : Colors.grey[500],
-                                  ),
+                                        height: 1.6,
+                                        color: note.content.isNotEmpty
+                                            ? Theme.of(context)
+                                                .textTheme
+                                                .bodyLarge
+                                                ?.color // Use theme text color
+                                            : Colors.grey[500],
+                                      ),
                                 ),
                               ),
                             ),
@@ -343,15 +304,15 @@ class _NoteViewPageState extends State<NoteViewPage>
                   Text(
                     'فشل تحميل الملاحظة',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Colors.red[600],
-                    ),
+                          color: Colors.red[600],
+                        ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     state.failure.message ?? "حدث خطأ غير معروف",
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                          color: Colors.grey[600],
+                        ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -370,6 +331,53 @@ class _NoteViewPageState extends State<NoteViewPage>
         },
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _fadeAnimationController.dispose();
+    _slideAnimationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize animations
+    _fadeAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _slideAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeAnimationController,
+      curve: Curves.easeOut,
+    ));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideAnimationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    // Dispatch event to load the specific note
+    context.read<NotesBloc>().add(GetNoteByIdEvent(noteId: widget.noteId));
+
+    // Start animations
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _fadeAnimationController.forward();
+      _slideAnimationController.forward();
+    });
   }
 
   void _confirmDelete(BuildContext context, String noteId) {
