@@ -1,4 +1,5 @@
 import 'package:isar/isar.dart';
+
 import '../../../../core/errors/exceptions.dart'; // Import custom exceptions
 import '../models/note_model.dart';
 import 'note_local_data_source.dart';
@@ -21,24 +22,16 @@ class NoteLocalDataSourceImpl implements NoteLocalDataSource {
   }
 
   @override
-  Future<List<NoteModel>> getNotes() async {
+  Future<void> deleteNote(String id) async {
     try {
-      final notes = await isar.noteModels.where().findAll();
-      
-      // Sort notes: pinned notes first (sorted by order), then unpinned notes (sorted by order)
-      notes.sort((a, b) {
-        // First, sort by pinned status (pinned notes come first)
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-        
-        // If both have the same pinned status, sort by order
-        final aOrder = a.order ?? 0;
-        final bOrder = b.order ?? 0;
-        return aOrder.compareTo(bOrder);
+      await isar.writeTxn(() async {
+        final success = await isar.noteModels.filter().idEqualTo(id).deleteFirst();
+        if (!success) {
+          throw NotFoundException(); // Note not found to delete
+        }
       });
-      
-      return notes;
     } catch (e) {
+      if (e is NotFoundException) rethrow;
       throw DatabaseException();
     }
   }
@@ -53,6 +46,46 @@ class NoteLocalDataSourceImpl implements NoteLocalDataSource {
       return note;
     } catch (e) {
       if (e is NotFoundException) rethrow; // Re-throw if it's our specific exception
+      throw DatabaseException();
+    }
+  }
+
+  @override
+  Future<List<NoteModel>> getNotes() async {
+    try {
+      final notes = await isar.noteModels.where().findAll();
+
+      // Sort notes: pinned notes first (sorted by order), then unpinned notes (sorted by order)
+      notes.sort((a, b) {
+        // Sort by order first, then by pinned status
+        final aOrder = a.order ?? 0;
+        final bOrder = b.order ?? 0;
+        if (aOrder != bOrder) {
+          return aOrder.compareTo(bOrder);
+        }
+        // If order is the same, sort by pinned status (pinned notes come first)
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return 0;
+      });
+
+      return notes;
+    } catch (e) {
+      throw DatabaseException();
+    }
+  }
+
+  @override
+  Future<List<NoteModel>> searchNotes(String query) async {
+    try {
+      final notes = await isar.noteModels
+          .filter()
+          .titleContains(query, caseSensitive: false)
+          .or()
+          .contentContains(query, caseSensitive: false)
+          .findAll();
+      return notes;
+    } catch (e) {
       throw DatabaseException();
     }
   }
@@ -79,36 +112,6 @@ class NoteLocalDataSourceImpl implements NoteLocalDataSource {
       return note;
     } catch (e) {
       if (e is NotFoundException) rethrow;
-      throw DatabaseException();
-    }
-  }
-
-  @override
-  Future<void> deleteNote(String id) async {
-    try {
-      await isar.writeTxn(() async {
-        final success = await isar.noteModels.filter().idEqualTo(id).deleteFirst();
-        if (!success) {
-          throw NotFoundException(); // Note not found to delete
-        }
-      });
-    } catch (e) {
-      if (e is NotFoundException) rethrow;
-      throw DatabaseException();
-    }
-  }
-
-  @override
-  Future<List<NoteModel>> searchNotes(String query) async {
-    try {
-      final notes = await isar.noteModels
-          .filter()
-          .titleContains(query, caseSensitive: false)
-          .or()
-          .contentContains(query, caseSensitive: false)
-          .findAll();
-      return notes;
-    } catch (e) {
       throw DatabaseException();
     }
   }

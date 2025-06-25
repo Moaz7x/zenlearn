@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:zenlearn/core/routes/app_routes.dart'; // NEW: Import the file where routeObserver is defined
+import 'package:zenlearn/core/routes/app_routes.dart';
 import 'package:zenlearn/core/widgets/app_scaffold.dart';
 import 'package:zenlearn/features/notes/domain/entities/note_entity.dart';
 import 'package:zenlearn/features/notes/presentation/bloc/notes_bloc.dart';
@@ -184,6 +184,47 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
                           if (index >= _notes.length) return const SizedBox.shrink();
                           return _buildNoteItem(_notes[index], index);
                         },
+                        // Add proxyDecorator here to apply visual effects during drag
+                        proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                          return AnimatedBuilder(
+                            animation: animation,
+                            builder: (BuildContext context, Widget? child) {
+                              final double animValue = Curves.easeInOut.transform(animation.value);
+                              final double scale = 1.0 + (0.05 * animValue); // Scale up by 5%
+                              final double blurRadius =
+                                  8.0 + (4.0 * animValue); // Blur from 8 to 12
+                              final double spreadRadius =
+                                  0.0 + (2.0 * animValue); // Spread from 0 to 2
+
+                              return Transform.scale(
+                                scale: scale,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16.0),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(
+                                            0.1 + (0.05 * animValue)), // Slightly more opaque
+                                        blurRadius: blurRadius,
+                                        offset: const Offset(0, 4),
+                                        spreadRadius: spreadRadius,
+                                      ),
+                                      BoxShadow(
+                                        color: Colors.black
+                                            .withOpacity(0.05), // Keep this one constant
+                                        blurRadius: 16.0,
+                                        offset: const Offset(0, 8),
+                                        spreadRadius: 0,
+                                      ),
+                                    ],
+                                  ),
+                                  child: child, // The original NoteCard
+                                ),
+                              );
+                            },
+                            child: child,
+                          );
+                        },
                       )
                     : ListView());
           } else if (state is NotesError) {
@@ -287,17 +328,21 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
   }
 
   Widget _buildNoteItem(NoteEntity note, int index) {
-    return Container(
+    return ReorderableDelayedDragStartListener(
       key: ValueKey(note.id),
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-      child: NoteCard(
-        note: note,
-        onTap: () {
-          context.go('/notes/view/${note.id}');
-        },
-        onTogglePin: () {
-          context.read<NotesBloc>().add(TogglePinNoteEvent(note: note));
-        },
+      index: index,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+        child: NoteCard(
+          note: note,
+          onTap: () {
+            context.go("/notes/view/${note.id}");
+          },
+          onTogglePin: () {
+            context.read<NotesBloc>().add(TogglePinNoteEvent(note: note));
+          },
+          // Removed onLongPress from NoteCard as it's no longer needed there
+        ),
       ),
     );
   }
