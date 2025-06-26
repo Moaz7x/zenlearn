@@ -41,11 +41,27 @@ class NotesInitial extends NotesState {
 /// State indicating that notes have been successfully loaded.
 class NotesLoaded extends NotesState {
   final List<NoteEntity> notes;
+  final String? currentSortBy;
+  final bool? currentSortAscending;
+  final int? currentFilterColor;
+  final String? currentFilterTag;
 
-  const NotesLoaded({required this.notes});
+  const NotesLoaded({
+    required this.notes,
+    this.currentSortBy,
+    this.currentSortAscending,
+    this.currentFilterColor,
+    this.currentFilterTag,
+  });
 
   @override
-  List<Object> get props => [notes];
+  List<Object?> get props => [
+        notes,
+        currentSortBy,
+        currentSortAscending,
+        currentFilterColor,
+        currentFilterTag,
+      ];
 }
 
 /// State indicating that notes are currently being loaded or an operation is in progress.
@@ -72,7 +88,7 @@ abstract class NotesState extends Equatable {
   const NotesState();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
 
 /// State indicating a note has been successfully updated.
@@ -84,6 +100,7 @@ class NoteUpdatedSuccess extends NotesState {
   @override
   List<Object> get props => [note];
 }
+
 class NoteLoadedById extends NotesState {
   final NoteEntity note;
 
@@ -92,3 +109,23 @@ class NoteLoadedById extends NotesState {
   @override
   List<Object> get props => [note];
 }
+
+class NotesReorderedSuccess extends NotesState {
+  final List<NoteEntity> notes;
+
+  const NotesReorderedSuccess({required this.notes});
+
+  @override
+  List<Object> get props => [notes];
+}
+
+class NoteToggledPinSuccess extends NotesState {
+  final NoteEntity note;
+
+  const NoteToggledPinSuccess({required this.note});
+
+  @override
+  List<Object> get props => [note];
+}
+
+

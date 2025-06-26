@@ -44,7 +44,25 @@ class GetNoteByIdEvent extends NotesEvent {
 
 /// Event to load all notes.
 class LoadNotes extends NotesEvent {
-  const LoadNotes();
+  final String? sortBy;
+  final bool? sortAscending;
+  final int? filterColor;
+  final String? filterTag;
+
+  const LoadNotes({
+    this.sortBy,
+    this.sortAscending,
+    this.filterColor,
+    this.filterTag,
+  });
+
+  @override
+  List<Object?> get props => [
+        sortBy,
+        sortAscending,
+        filterColor,
+        filterTag,
+      ];
 }
 
 /// Abstract base class for all Notes events.
@@ -53,7 +71,7 @@ abstract class NotesEvent extends Equatable {
   const NotesEvent();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
 
 /// Event to reorder notes.
@@ -96,3 +114,53 @@ class UpdateNoteEvent extends NotesEvent {
   @override
   List<Object> get props => [note];
 }
+
+class AddTagToNoteEvent extends NotesEvent {
+  final NoteEntity note;
+  final String tag;
+
+  const AddTagToNoteEvent({required this.note, required this.tag});
+
+  @override
+  List<Object> get props => [note, tag];
+}
+
+class RemoveTagFromNoteEvent extends NotesEvent {
+  final NoteEntity note;
+  final String tag;
+
+  const RemoveTagFromNoteEvent({required this.note, required this.tag});
+
+  @override
+  List<Object> get props => [note, tag];
+}
+
+class FilterNotesByTagEvent extends NotesEvent {
+  final String tag;
+
+  const FilterNotesByTagEvent({required this.tag});
+
+  @override
+  List<Object> get props => [tag];
+}
+
+class SortNotesEvent extends NotesEvent {
+  final String sortBy;
+  final bool ascending;
+
+  const SortNotesEvent({required this.sortBy, this.ascending = true});
+
+  @override
+  List<Object> get props => [sortBy, ascending];
+}
+
+class FilterNotesByColorEvent extends NotesEvent {
+  final int? color;
+
+  const FilterNotesByColorEvent({this.color});
+
+  @override
+  List<Object?> get props => [color];
+}
+
+

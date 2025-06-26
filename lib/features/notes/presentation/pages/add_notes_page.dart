@@ -21,7 +21,9 @@ class AddNotesPage extends StatefulWidget {
 class _AddNotesPageState extends State<AddNotesPage> with TickerProviderStateMixin {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
-  int? _selectedColor; // To store the selected color
+  final _tagController = TextEditingController();
+  int? _selectedColor;
+  List<String> _tags = [];
 
   late AnimationController _slideAnimationController;
   late AnimationController _fadeAnimationController;
@@ -44,7 +46,7 @@ class _AddNotesPageState extends State<AddNotesPage> with TickerProviderStateMix
               icon: const Icon(Icons.save, size: 18),
               label: const Text('حفظ'),
               style: ElevatedButton.styleFrom(
-                elevation: 4.0, // Added subtle elevation
+                elevation: 4.0,
                 shadowColor: Theme.of(context).primaryColor.withOpacity(0.3),
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 shape: RoundedRectangleBorder(
@@ -77,7 +79,7 @@ class _AddNotesPageState extends State<AddNotesPage> with TickerProviderStateMix
                 margin: const EdgeInsets.all(16),
               ),
             );
-            context.pop(); // Go back using GoRouter
+            context.pop();
           } else if (state is NotesError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -108,7 +110,6 @@ class _AddNotesPageState extends State<AddNotesPage> with TickerProviderStateMix
               padding: const EdgeInsets.all(20.0),
               child: Column(
                 children: [
-                  // Title input with enhanced styling
                   CustomInput(
                     controller: _titleController,
                     hintText: 'عنوان الملاحظة',
@@ -123,12 +124,9 @@ class _AddNotesPageState extends State<AddNotesPage> with TickerProviderStateMix
                         offset: const Offset(0, 4),
                       ),
                     ],
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 16), // Adjusted padding
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   ),
                   const SizedBox(height: 20),
-
-                  // Content input with enhanced styling
                   Expanded(
                     child: CustomInput(
                       controller: _contentController,
@@ -145,19 +143,17 @@ class _AddNotesPageState extends State<AddNotesPage> with TickerProviderStateMix
                           offset: const Offset(0, 4),
                         ),
                       ],
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 16), // Adjusted padding
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // Color picker with enhanced styling
+                  _buildTagInput(),
+                  const SizedBox(height: 20),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     child: Material(
-                      // Wrap with Material for elevation
                       key: ValueKey(_selectedColor),
-                      elevation: 4.0, // Added elevation
+                      elevation: 4.0,
                       shadowColor: Colors.black.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16.0),
                       child: Container(
@@ -212,6 +208,7 @@ class _AddNotesPageState extends State<AddNotesPage> with TickerProviderStateMix
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _tagController.dispose();
     _slideAnimationController.dispose();
     _fadeAnimationController.dispose();
     super.dispose();
@@ -221,7 +218,6 @@ class _AddNotesPageState extends State<AddNotesPage> with TickerProviderStateMix
   void initState() {
     super.initState();
 
-    // Initialize animations
     _slideAnimationController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -251,13 +247,53 @@ class _AddNotesPageState extends State<AddNotesPage> with TickerProviderStateMix
       _titleController.text = widget.existingNote!.title;
       _contentController.text = widget.existingNote!.content;
       _selectedColor = widget.existingNote!.color;
+      _tags = List.from(widget.existingNote!.tags ?? []);
     }
 
-    // Start animations
     Future.delayed(const Duration(milliseconds: 100), () {
       _slideAnimationController.forward();
       _fadeAnimationController.forward();
     });
+  }
+
+  Widget _buildTagInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CustomInput(
+          controller: _tagController,
+          hintText: 'أضف علامة (اضغط Enter)',
+          filled: true,
+          fillColor: Theme.of(context).cardColor,
+          borderRadius: 16.0,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8.0,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+        if (_tags.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 4.0,
+            children: _tags
+                .map((tag) => Chip(
+                      label: Text(tag),
+                      onDeleted: () {
+                        setState(() {
+                          _tags.remove(tag);
+                        });
+                      },
+                    ))
+                .toList(),
+          ),
+        ],
+      ],
+    );
   }
 
   void _saveNote() {
@@ -286,23 +322,23 @@ class _AddNotesPageState extends State<AddNotesPage> with TickerProviderStateMix
     }
 
     if (widget.existingNote == null) {
-      // Create new note
       final newNote = NoteEntity(
-        id: const Uuid().v4(), // Generate a unique ID for the new note
+        id: const Uuid().v4(),
         title: title,
         content: content,
         createdAt: DateTime.now(),
         isPinned: false,
         color: _selectedColor,
+        tags: _tags.isEmpty ? null : _tags, // Save tags
       );
       context.read<NotesBloc>().add(CreateNoteEvent(note: newNote));
     } else {
-      // Update existing note
       final updatedNote = widget.existingNote!.copyWith(
         title: title,
         content: content,
         updatedAt: DateTime.now(),
         color: _selectedColor,
+        tags: _tags.isEmpty ? null : _tags, // Save tags
       );
       context.read<NotesBloc>().add(UpdateNoteEvent(note: updatedNote));
     }

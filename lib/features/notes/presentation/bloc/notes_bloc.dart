@@ -20,6 +20,11 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
   final SearchNotes searchNotesUseCase;
   final GetNoteById getNoteByIdUseCase; // NEW: Add GetNoteById use case
 
+  String? _currentSortBy; // To keep track of current sorting
+  bool? _currentSortAscending; // To keep track of current sorting direction
+  int? _currentFilterColor; // To keep track of current color filter
+  String? _currentFilterTag; // To keep track of current tag filter
+
   NotesBloc({
     required this.createNoteUseCase,
     required this.getNotesUseCase,
@@ -37,25 +42,32 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     on<ChangeNoteColorEvent>(_onChangeNoteColor);
     on<GetNoteByIdEvent>(_onGetNoteById); // NEW: Add handler for GetNoteByIdEvent
     on<ReorderNotesEvent>(_onReorderNotes); // NEW: Add handler for ReorderNotesEvent
+    on<AddTagToNoteEvent>(_onAddTagToNote);
+    on<RemoveTagFromNoteEvent>(_onRemoveTagFromNote);
+    on<SortNotesEvent>(_onSortNotes);
+    on<FilterNotesByColorEvent>(_onFilterNotesByColor);
+    on<FilterNotesByTagEvent>(_onFilterNotesByTag);
   }
+
   Future<void> _onChangeNoteColor(ChangeNoteColorEvent event, Emitter<NotesState> emit) async {
-    // Create a new NoteEntity with the updated color
     final updatedNote = event.note.copyWith(color: event.newColor);
-    // Use the update use case
     final result = await updateNoteUseCase(UpdateNoteParams(note: updatedNote));
     result.fold(
       (failure) => emit(NotesError(failure: failure)),
       (note) {
-        // If successful, emit a success state and then reload notes to reflect changes
         emit(NoteUpdatedSuccess(note: note));
-        add(const LoadNotes());
+        add(LoadNotes(
+          sortBy: _currentSortBy,
+          sortAscending: _currentSortAscending,
+          filterColor: _currentFilterColor,
+          filterTag: _currentFilterTag,
+        ));
       },
     );
   }
 
   Future<void> _onCreateNote(CreateNoteEvent event, Emitter<NotesState> emit) async {
-    emit(const NotesLoading()); // Or a more specific state like NoteCreating
-    // Ensure the note has a unique ID and creation timestamp if not already set
+    emit(const NotesLoading());
     final newNote = event.note.copyWith(
       id: event.note.id.isEmpty ? const Uuid().v4() : event.note.id,
       createdAt: event.note.createdAt,
@@ -66,23 +78,31 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
       (failure) => emit(NotesError(failure: failure)),
       (note) => emit(NoteCreatedSuccess(note: note)),
     );
-    // After creation, you might want to reload all notes to update the list
-    add(const LoadNotes());
+    add(LoadNotes(
+      sortBy: _currentSortBy,
+      sortAscending: _currentSortAscending,
+      filterColor: _currentFilterColor,
+      filterTag: _currentFilterTag,
+    ));
   }
 
   Future<void> _onDeleteNote(DeleteNoteEvent event, Emitter<NotesState> emit) async {
-    emit(const NotesLoading()); // Or a more specific state like NoteDeleting
+    emit(const NotesLoading());
     final result = await deleteNoteUseCase(DeleteNoteParams(id: event.noteId));
     result.fold(
       (failure) => emit(NotesError(failure: failure)),
       (_) => emit(NoteDeletedSuccess(noteId: event.noteId)),
     );
-    // After deletion, you might want to reload all notes to update the list
-    add(const LoadNotes());
+    add(LoadNotes(
+      sortBy: _currentSortBy,
+      sortAscending: _currentSortAscending,
+      filterColor: _currentFilterColor,
+      filterTag: _currentFilterTag,
+    ));
   }
 
   Future<void> _onGetNoteById(GetNoteByIdEvent event, Emitter<NotesState> emit) async {
-    emit(const NotesLoading()); // Or a more specific state like NoteLoadingById
+    emit(const NotesLoading());
     final result = await getNoteByIdUseCase(GetNoteByIdParams(id: event.noteId));
     result.fold(
       (failure) => emit(NotesError(failure: failure)),
@@ -92,65 +112,111 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
 
   Future<void> _onLoadNotes(LoadNotes event, Emitter<NotesState> emit) async {
     emit(const NotesLoading());
+
+    _currentSortBy = event.sortBy ?? _currentSortBy;
+    _currentSortAscending = event.sortAscending ?? _currentSortAscending;
+    _currentFilterColor = event.filterColor ?? _currentFilterColor;
+    _currentFilterTag = event.filterTag ?? _currentFilterTag;
+
     final result = await getNotesUseCase(NoParams());
     result.fold(
       (failure) => emit(NotesError(failure: failure)),
-      (notes) => emit(NotesLoaded(notes: notes)),
+      (notes) {
+        List<NoteEntity> filteredNotes = List.from(notes);
+
+        // Apply color filter
+        if (_currentFilterColor != null) {
+          filteredNotes = filteredNotes
+              .where((note) => note.color == _currentFilterColor)
+              .toList();
+        }
+
+        // Apply tag filter
+        if (_currentFilterTag != null && _currentFilterTag!.isNotEmpty) {
+          filteredNotes = filteredNotes
+              .where((note) => note.tags?.contains(_currentFilterTag) ?? false)
+              .toList();
+        }
+
+        // Apply sorting
+        if (_currentSortBy != null) {
+          filteredNotes.sort((a, b) {
+            int compareResult = 0;
+            switch (_currentSortBy) {
+              case 'date':
+                compareResult = a.createdAt.compareTo(b.createdAt);
+                break;
+              case 'title':
+                compareResult = a.title.compareTo(b.title);
+                break;
+              case 'pinned':
+                compareResult = a.isPinned == b.isPinned
+                    ? 0
+                    : (a.isPinned ? -1 : 1);
+                break;
+            }
+            return _currentSortAscending == true
+                ? compareResult
+                : -compareResult;
+          });
+        }
+
+        emit(NotesLoaded(
+          notes: filteredNotes,
+          currentSortBy: _currentSortBy,
+          currentSortAscending: _currentSortAscending,
+          currentFilterColor: _currentFilterColor,
+          currentFilterTag: _currentFilterTag,
+        ));
+      },
     );
   }
 
-   Future<void> _onReorderNotes(ReorderNotesEvent event, Emitter<NotesState> emit) async {
+  Future<void> _onReorderNotes(ReorderNotesEvent event, Emitter<NotesState> emit) async {
     final notes = List<NoteEntity>.from(event.notes);
 
-    // Separate pinned and unpinned notes
     final pinnedNotes = notes.where((note) => note.isPinned).toList();
     final unpinnedNotes = notes.where((note) => !note.isPinned).toList();
 
-    // Determine which list to reorder
     if (event.oldIndex < pinnedNotes.length && event.newIndex < pinnedNotes.length) {
-      // Reordering within pinned notes
       final note = pinnedNotes.removeAt(event.oldIndex);
       pinnedNotes.insert(event.newIndex, note);
     } else if (event.oldIndex >= pinnedNotes.length && event.newIndex >= pinnedNotes.length) {
-      // Reordering within unpinned notes
       final adjustedOldIndex = event.oldIndex - pinnedNotes.length;
       final adjustedNewIndex = event.newIndex - pinnedNotes.length;
       final note = unpinnedNotes.removeAt(adjustedOldIndex);
       unpinnedNotes.insert(adjustedNewIndex, note);
     }
 
-    // Combine the lists back together
     final reorderedNotes = [...pinnedNotes, ...unpinnedNotes];
 
-    // List to hold all update futures
     final List<Future<void>> updateFutures = [];
 
-    // Update the order property of each note and save to database
     for (int i = 0; i < reorderedNotes.length; i++) {
       final noteToUpdate = reorderedNotes[i].copyWith(order: i);
-      // Add the future to the list without awaiting immediately
       updateFutures.add(updateNoteUseCase(UpdateNoteParams(note: noteToUpdate)).then((result) {
         result.fold(
           (failure) {
-            // يمكنك هنا التعامل مع الأخطاء الفردية لتحديث الملاحظات إذا لزم الأمر
-            // على سبيل المثال، تسجيل الخطأ:
             print('Error updating note order for ${noteToUpdate.id}: ${failure.message}');
           },
-          (_) {}, // النجاح، لا يلزم اتخاذ إجراء هنا
+          (_) {},
         );
       }));
     }
 
-    // انتظر حتى تكتمل جميع تحديثات قاعدة البيانات
     await Future.wait(updateFutures);
 
-    // بدلاً من إعادة تحميل جميع الملاحظات، قم بإصدار القائمة المعاد ترتيبها مباشرة.
-    // هذا يضمن تحديث واجهة المستخدم بكفاءة دون جلب بيانات كامل.
-    emit(NotesLoaded(notes: reorderedNotes));
+    emit(NotesLoaded(
+      notes: reorderedNotes,
+      currentSortBy: _currentSortBy,
+      currentSortAscending: _currentSortAscending,
+      currentFilterColor: _currentFilterColor,
+      currentFilterTag: _currentFilterTag,
+    ));
   }
 
   Future<void> _onSearchNotes(SearchNotesEvent event, Emitter<NotesState> emit) async {
-    emit(const NotesLoading()); // Or a specific state like NotesSearching
+    emit(const NotesLoading());
     final result = await searchNotesUseCase(SearchNotesParams(query: event.query));
     result.fold(
       (failure) => emit(NotesError(failure: failure)),
@@ -159,29 +225,110 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
   }
 
   Future<void> _onTogglePinNote(TogglePinNoteEvent event, Emitter<NotesState> emit) async {
-    // Create a new NoteEntity with the toggled pinned status
     final updatedNote = event.note.copyWith(isPinned: !event.note.isPinned);
-    // Use the update use case
     final result = await updateNoteUseCase(UpdateNoteParams(note: updatedNote));
     result.fold(
       (failure) => emit(NotesError(failure: failure)),
       (note) {
-        // If successful, emit a success state and then reload notes to reflect changes
         emit(NoteUpdatedSuccess(note: note));
-        add(const LoadNotes());
+        add(LoadNotes(
+          sortBy: _currentSortBy,
+          sortAscending: _currentSortAscending,
+          filterColor: _currentFilterColor,
+          filterTag: _currentFilterTag,
+        ));
       },
     );
   }
 
   Future<void> _onUpdateNote(UpdateNoteEvent event, Emitter<NotesState> emit) async {
-    emit(const NotesLoading()); // Or a more specific state like NoteUpdating
+    emit(const NotesLoading());
     final updatedNote = event.note.copyWith(updatedAt: DateTime.now());
     final result = await updateNoteUseCase(UpdateNoteParams(note: updatedNote));
     result.fold(
       (failure) => emit(NotesError(failure: failure)),
       (note) => emit(NoteUpdatedSuccess(note: note)),
     );
-    // After update, you might want to reload all notes to update the list
-    add(const LoadNotes());
+    add(LoadNotes(
+      sortBy: _currentSortBy,
+      sortAscending: _currentSortAscending,
+      filterColor: _currentFilterColor,
+      filterTag: _currentFilterTag,
+    ));
+  }
+
+  Future<void> _onAddTagToNote(AddTagToNoteEvent event, Emitter<NotesState> emit) async {
+    final currentTags = event.note.tags?.toList() ?? [];
+    if (!currentTags.contains(event.tag)) {
+      currentTags.add(event.tag);
+      final updatedNote = event.note.copyWith(tags: currentTags);
+      final result = await updateNoteUseCase(UpdateNoteParams(note: updatedNote));
+      result.fold(
+        (failure) => emit(NotesError(failure: failure)),
+        (note) {
+          emit(NoteUpdatedSuccess(note: note));
+          add(LoadNotes(
+            sortBy: _currentSortBy,
+            sortAscending: _currentSortAscending,
+            filterColor: _currentFilterColor,
+            filterTag: _currentFilterTag,
+          ));
+        },
+      );
+    }
+  }
+
+  Future<void> _onRemoveTagFromNote(RemoveTagFromNoteEvent event, Emitter<NotesState> emit) async {
+    final currentTags = event.note.tags?.toList() ?? [];
+    if (currentTags.contains(event.tag)) {
+      currentTags.remove(event.tag);
+      final updatedNote = event.note.copyWith(tags: currentTags);
+      final result = await updateNoteUseCase(UpdateNoteParams(note: updatedNote));
+      result.fold(
+        (failure) => emit(NotesError(failure: failure)),
+        (note) {
+          emit(NoteUpdatedSuccess(note: note));
+          add(LoadNotes(
+            sortBy: _currentSortBy,
+            sortAscending: _currentSortAscending,
+            filterColor: _currentFilterColor,
+            filterTag: _currentFilterTag,
+          ));
+        },
+      );
+    }
+  }
+
+  Future<void> _onSortNotes(SortNotesEvent event, Emitter<NotesState> emit) async {
+    _currentSortBy = event.sortBy;
+    _currentSortAscending = event.ascending;
+    add(LoadNotes(
+      sortBy: _currentSortBy,
+      sortAscending: _currentSortAscending,
+      filterColor: _currentFilterColor,
+      filterTag: _currentFilterTag,
+    ));
+  }
+
+  Future<void> _onFilterNotesByColor(FilterNotesByColorEvent event, Emitter<NotesState> emit) async {
+    _currentFilterColor = event.color;
+    add(LoadNotes(
+      sortBy: _currentSortBy,
+      sortAscending: _currentSortAscending,
+      filterColor: _currentFilterColor,
+      filterTag: _currentFilterTag,
+    ));
+  }
+
+  Future<void> _onFilterNotesByTag(FilterNotesByTagEvent event, Emitter<NotesState> emit) async {
+    _currentFilterTag = event.tag;
+    add(LoadNotes(
+      sortBy: _currentSortBy,
+      sortAscending: _currentSortAscending,
+      filterColor: _currentFilterColor,
+      filterTag: _currentFilterTag,
+    ));
   }
 }
+
+

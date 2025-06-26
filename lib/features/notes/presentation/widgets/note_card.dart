@@ -2,37 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:zenlearn/features/notes/domain/entities/note_entity.dart';
 
 class NoteCard extends StatelessWidget {
-  // Changed to StatelessWidget
   final NoteEntity note;
   final VoidCallback onTap;
   final VoidCallback onTogglePin;
+  final Function(String tag)? onAddTag;
+  final Function(String tag)? onRemoveTag;
 
   const NoteCard({
     super.key,
     required this.note,
     required this.onTap,
     required this.onTogglePin,
+    this.onAddTag,
+    this.onRemoveTag,
   });
-
-  // Removed all animation and long press state/methods (_animationController, _scaleAnimation, _isLongPressed, initState, dispose, _handleLongPressStart, _handleLongPressEnd, _handleTapCancel)
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap, // Only handle tap
-      // Removed onLongPressStart, onLongPressEnd, onTapCancel, onLongPressCancel
+      onTap: onTap,
       child: Container(
-        // Removed AnimatedBuilder and Transform.scale
-        // margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16.0),
           boxShadow: [
-            // Simplified boxShadow - no longer depends on _isLongPressed
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
-              blurRadius: 8.0, // Fixed blurRadius
+              blurRadius: 8.0,
               offset: const Offset(0, 4),
-              spreadRadius: 0, // Fixed spreadRadius
+              spreadRadius: 0,
             ),
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -66,7 +63,6 @@ class NoteCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    // Always show drag handle icon
                     Icon(
                       Icons.drag_handle,
                       color: Colors.grey[400],
@@ -96,6 +92,17 @@ class NoteCard extends StatelessWidget {
                         ),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                if (note.tags != null && note.tags!.isNotEmpty) ...[
+                  const SizedBox(height: 8.0),
+                  Wrap(
+                    spacing: 8.0,
+                    runSpacing: 4.0,
+                    children: note.tags!.map((tag) => Chip(
+                      label: Text(tag),
+                      onDeleted: onRemoveTag != null ? () => onRemoveTag!(tag) : null,
+                    )).toList(),
                   ),
                 ],
                 const SizedBox(height: 12.0),
@@ -138,3 +145,5 @@ class NoteCard extends StatelessWidget {
     }
   }
 }
+
+
