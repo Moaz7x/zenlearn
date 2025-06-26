@@ -7,7 +7,9 @@ import 'package:zenlearn/features/notes/domain/entities/note_entity.dart';
 import 'package:zenlearn/features/notes/presentation/bloc/notes_bloc.dart';
 import 'package:zenlearn/features/notes/presentation/bloc/notes_events.dart';
 import 'package:zenlearn/features/notes/presentation/bloc/notes_states.dart';
-import 'package:zenlearn/features/notes/presentation/widgets/note_card.dart';
+import 'package:zenlearn/features/notes/presentation/widgets/color_picker_widget.dart';
+
+import '../widgets/note_card.dart';
 
 class NotesPage extends StatefulWidget {
   const NotesPage({super.key});
@@ -128,168 +130,167 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
               child: CircularProgressIndicator(),
             );
           } else if (state is NotesLoaded || _notes.isNotEmpty) {
-            if (_notes.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(24.0),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.note_add_outlined,
-                          size: 80,
-                          color: Theme.of(context).primaryColor.withOpacity(0.7),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'لا توجد ملاحظات بعد',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              color: Colors.grey[700],
-                              fontWeight: FontWeight.w600,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'ابدأ رحلتك في تدوين الأفكار والملاحظات\nلتنظيم حياتك بشكل أفضل',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[500],
-                              height: 1.5,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 32),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          context.go('/notes/add');
-                        },
-                        icon: const Icon(Icons.add, size: 20),
-                        label: const Text(
-                          'إضافة ملاحظة جديدة',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24.0,
-                            vertical: 16.0,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16.0),
-                          ),
-                          elevation: 4.0,
-                          shadowColor: Theme.of(context).primaryColor.withOpacity(0.3),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(16.0),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12.0),
-                          border: Border.all(
-                            color: Colors.blue.withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.lightbulb_outline,
-                              color: Colors.blue[600],
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'نصيحة: يمكنك أيضاً استخدام الزر العائم في الأسفل لإضافة ملاحظات جديدة',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Colors.blue[700],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
             return Column(
               children: [
                 _buildFilterAndSortBar(context),
                 Expanded(
-                  child: BlocBuilder<NotesBloc, NotesState>(
-                      builder: (context, state) => state is NotesLoaded
-                          ? ReorderableListView.builder(
-                              padding: const EdgeInsets.only(top: 8.0, bottom: 80.0),
-                              itemCount: _notes.length,
-                              onReorder: (oldIndex, newIndex) {
-                                context.read<NotesBloc>().add(ReorderNotesEvent(
-                                      notes: state.notes,
-                                      oldIndex: oldIndex,
-                                      newIndex: newIndex > oldIndex ? newIndex - 1 : newIndex,
-                                    ));
-                              },
-                              itemBuilder: (context, index) {
-                                if (index >= _notes.length) return const SizedBox.shrink();
-                                return _buildNoteItem(_notes[index], index);
-                              },
-                              proxyDecorator: (Widget child, int index, Animation<double> animation) {
-                                return AnimatedBuilder(
-                                  animation: animation,
-                                  builder: (BuildContext context, Widget? child) {
-                                    final double animValue = Curves.easeInOut.transform(animation.value);
-                                    final double scale = 1.0 + (0.05 * animValue);
-                                    final double blurRadius =
-                                        8.0 + (4.0 * animValue);
-                                    final double spreadRadius =
-                                        0.0 + (2.0 * animValue);
-
-                                    return Transform.scale(
-                                      scale: scale,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(16.0),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(
-                                                  0.1 + (0.05 * animValue)),
-                                              blurRadius: blurRadius,
-                                              offset: const Offset(0, 4),
-                                              spreadRadius: spreadRadius,
-                                            ),
-                                            BoxShadow(
-                                              color: Colors.black
-                                                  .withOpacity(0.05),
-                                              blurRadius: 16.0,
-                                              offset: const Offset(0, 8),
-                                              spreadRadius: 0,
-                                            ),
-                                          ],
-                                        ),
-                                        child: child,
+                  child: _notes.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(24.0),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.note_add_outlined,
+                                    size: 80,
+                                    color: Theme.of(context).primaryColor.withOpacity(0.7),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                Text(
+                                  'لا توجد ملاحظات بعد',
+                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                        color: Colors.grey[700],
+                                        fontWeight: FontWeight.w600,
                                       ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'ابدأ رحلتك في تدوين الأفكار والملاحظات\nلتنظيم حياتك بشكل أفضل',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: Colors.grey[500],
+                                        height: 1.5,
+                                      ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 32),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    context.go('/notes/add');
+                                  },
+                                  icon: const Icon(Icons.add, size: 20),
+                                  label: const Text(
+                                    'إضافة ملاحظة جديدة',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Theme.of(context).primaryColor,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24.0,
+                                      vertical: 16.0,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16.0),
+                                    ),
+                                    elevation: 4.0,
+                                    shadowColor: Theme.of(context).primaryColor.withOpacity(0.3),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.all(16.0),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(12.0),
+                                    border: Border.all(
+                                      color: Colors.blue.withOpacity(0.2),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.lightbulb_outline,
+                                        color: Colors.blue[600],
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          'نصيحة: يمكنك أيضاً استخدام الزر العائم في الأسفل لإضافة ملاحظات جديدة',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                color: Colors.blue[700],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : BlocBuilder<NotesBloc, NotesState>(
+                          builder: (context, state) => state is NotesLoaded
+                              ? ReorderableListView.builder(
+                                  padding: const EdgeInsets.only(top: 8.0, bottom: 80.0),
+                                  itemCount: _notes.length,
+                                  onReorder: (oldIndex, newIndex) {
+                                    context.read<NotesBloc>().add(ReorderNotesEvent(
+                                          notes: state.notes,
+                                          oldIndex: oldIndex,
+                                          newIndex: newIndex > oldIndex ? newIndex - 1 : newIndex,
+                                        ));
+                                  },
+                                  itemBuilder: (context, index) {
+                                    if (index >= _notes.length) return const SizedBox.shrink();
+                                    return _buildNoteItem(_notes[index], index);
+                                  },
+                                  proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                                    return AnimatedBuilder(
+                                      animation: animation,
+                                      builder: (BuildContext context, Widget? child) {
+                                        final double animValue = Curves.easeInOut.transform(animation.value);
+                                        final double scale = 1.0 + (0.05 * animValue);
+                                        final double blurRadius =
+                                            8.0 + (4.0 * animValue);
+                                        final double spreadRadius =
+                                            0.0 + (2.0 * animValue);
+
+                                        return Transform.scale(
+                                          scale: scale,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(16.0),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withOpacity(
+                                                      0.1 + (0.05 * animValue)),
+                                                  blurRadius: blurRadius,
+                                                  offset: const Offset(0, 4),
+                                                  spreadRadius: spreadRadius,
+                                                ),
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.05),
+                                                  blurRadius: 16.0,
+                                                  offset: const Offset(0, 8),
+                                                  spreadRadius: 0,
+                                                ),
+                                              ],
+                                            ),
+                                            child: child,
+                                          ),
+                                        );
+                                      },
+                                      child: child,
                                     );
                                   },
-                                  child: child,
-                                );
-                              },
-                            )
-                          : ListView()),
+                                )
+                              : ListView()),
                 ),
               ],
             );
@@ -444,11 +445,11 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
         return AlertDialog(
           title: const Text('تصفية حسب اللون'),
           content: SingleChildScrollView(
-            child: BlockPicker(
-              pickerColor: _currentFilterColor != null ? Color(_currentFilterColor!) : Colors.white,
-              onColorChanged: (color) {
+            child: ColorPickerWidget(
+              selectedColor: _currentFilterColor,
+              onColorSelected: (color) {
                 setState(() {
-                  _currentFilterColor = color.value;
+                  _currentFilterColor = color;
                   _loadNotes();
                 });
                 Navigator.of(context).pop();

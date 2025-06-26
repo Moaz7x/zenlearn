@@ -115,7 +115,7 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
 
     _currentSortBy = event.sortBy ?? _currentSortBy;
     _currentSortAscending = event.sortAscending ?? _currentSortAscending;
-    _currentFilterColor = event.filterColor ?? _currentFilterColor;
+        _currentFilterColor = event.filterColor; // Directly assign, don't use ??
     _currentFilterTag = event.filterTag ?? _currentFilterTag;
 
     final result = await getNotesUseCase(NoParams());
