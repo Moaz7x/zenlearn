@@ -260,21 +260,90 @@ class _AddNotesPageState extends State<AddNotesPage> with TickerProviderStateMix
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CustomInput(
-          controller: _tagController,
-          hintText: 'أضف علامة (اضغط Enter)',
-          filled: true,
-          fillColor: Theme.of(context).cardColor,
-          borderRadius: 16.0,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8.0,
-              offset: const Offset(0, 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.tag,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'علامات',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
             ),
+            ElevatedButton.icon(
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  builder: (context) {
+                    final tagController = TextEditingController();
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.of(context).viewInsets.bottom,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Add New Tag',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: CustomInput(
+                                    hintText: 'Enter tag name',
+                                    controller: tagController,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  onPressed: () {
+                                    if (tagController.text.isNotEmpty) {
+                                      setState(() {
+                                        _tags.add(tagController.text);
+                                      });
+                                      Navigator.pop(context);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Theme.of(context).primaryColor,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                )
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+              label: const Text('Add Tags'),
+              icon: const Icon(Icons.add),
+            )
           ],
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
+        const SizedBox(height: 12),
         if (_tags.isNotEmpty) ...[
           const SizedBox(height: 10),
           Wrap(

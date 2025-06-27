@@ -11,6 +11,67 @@ import 'package:zenlearn/features/notes/presentation/widgets/color_picker_widget
 
 import '../widgets/note_card.dart';
 
+// Dummy BlockPicker for demonstration. In a real app, use a proper color picker library.
+class BlockPicker extends StatelessWidget {
+  final Color pickerColor;
+  final ValueChanged<Color> onColorChanged;
+
+  const BlockPicker({
+    super.key,
+    required this.pickerColor,
+    required this.onColorChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 8.0,
+          children: <Color>[
+            Colors.red,
+            Colors.pink,
+            Colors.purple,
+            Colors.deepPurple,
+            Colors.indigo,
+            Colors.blue,
+            Colors.lightBlue,
+            Colors.cyan,
+            Colors.teal,
+            Colors.green,
+            Colors.lightGreen,
+            Colors.lime,
+            Colors.yellow,
+            Colors.amber,
+            Colors.orange,
+            Colors.deepOrange,
+            Colors.brown,
+            Colors.grey,
+            Colors.blueGrey,
+            Colors.black,
+            Colors.white,
+          ].map((color) => GestureDetector(
+            onTap: () => onColorChanged(color),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: pickerColor == color ? Colors.black : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+            ),
+          )).toList(),
+        ),
+      ],
+    );
+  }
+}
+
 class NotesPage extends StatefulWidget {
   const NotesPage({super.key});
 
@@ -27,66 +88,6 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
   bool _currentSortAscending = true;
   int? _currentFilterColor;
   String? _currentFilterTag;
-
-  @override
-  void initState() {
-    super.initState();
-    _fabAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-    _fabScaleAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fabAnimationController,
-      curve: Curves.elasticOut,
-    ));
-    _loadNotes(); // Initial load when the page is first created
-
-    // Animate FAB entrance
-    Future.delayed(const Duration(milliseconds: 300), () {
-      _fabAnimationController.forward();
-    });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    routeObserver.subscribe(this, ModalRoute.of(context)!);
-  }
-
-  @override
-  void didPopNext() {
-    _loadNotes(); // Reload notes when returning to this page
-  }
-
-  @override
-  void didPush() {
-    // Can be called here if you want to ensure loading on first push
-  }
-
-  @override
-  void dispose() {
-    _fabAnimationController.dispose();
-    routeObserver.unsubscribe(this);
-    super.dispose();
-  }
-
-  void _loadNotes() {
-    context.read<NotesBloc>().add(LoadNotes(
-          sortBy: _currentSortBy,
-          sortAscending: _currentSortAscending,
-          filterColor: _currentFilterColor,
-          filterTag: _currentFilterTag,
-        ));
-  }
-
-  void _updateNotesList(List<NoteEntity> newNotes) {
-    setState(() {
-      _notes = newNotes;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -349,29 +350,49 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
     );
   }
 
-  Widget _buildNoteItem(NoteEntity note, int index) {
-    return ReorderableDelayedDragStartListener(
-      key: ValueKey(note.id),
-      index: index,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-        child: NoteCard(
-          note: note,
-          onTap: () {
-            context.go("/notes/view/${note.id}");
-          },
-          onTogglePin: () {
-            context.read<NotesBloc>().add(TogglePinNoteEvent(note: note));
-          },
-          onAddTag: (tag) {
-            context.read<NotesBloc>().add(AddTagToNoteEvent(note: note, tag: tag));
-          },
-          onRemoveTag: (tag) {
-            context.read<NotesBloc>().add(RemoveTagFromNoteEvent(note: note, tag: tag));
-          },
-        ),
-      ),
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void didPopNext() {
+    _loadNotes(); // Reload notes when returning to this page
+  }
+
+  @override
+  void didPush() {
+    // Can be called here if you want to ensure loading on first push
+  }
+
+  @override
+  void dispose() {
+    _fabAnimationController.dispose();
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
     );
+    _fabScaleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fabAnimationController,
+      curve: Curves.elasticOut,
+    ));
+    _loadNotes(); // Initial load when the page is first created
+
+    // Animate FAB entrance
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _fabAnimationController.forward();
+    });
   }
 
   Widget _buildFilterAndSortBar(BuildContext context) {
@@ -438,6 +459,40 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
     );
   }
 
+  Widget _buildNoteItem(NoteEntity note, int index) {
+    return ReorderableDelayedDragStartListener(
+      key: ValueKey(note.id),
+      index: index,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+        child: NoteCard(
+          note: note,
+          onTap: () {
+            context.go("/notes/view/${note.id}");
+          },
+          onTogglePin: () {
+            context.read<NotesBloc>().add(TogglePinNoteEvent(note: note));
+          },
+          onAddTag: (tag) {
+            context.read<NotesBloc>().add(AddTagToNoteEvent(note: note, tag: tag));
+          },
+          onRemoveTag: (tag) {
+            context.read<NotesBloc>().add(RemoveTagFromNoteEvent(note: note, tag: tag));
+          },
+        ),
+      ),
+    );
+  }
+
+  void _loadNotes() {
+    context.read<NotesBloc>().add(LoadNotes(
+          sortBy: _currentSortBy,
+          sortAscending: _currentSortAscending,
+          filterColor: _currentFilterColor,
+          filterTag: _currentFilterTag,
+        ));
+  }
+
   void _showColorFilterDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -502,7 +557,7 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
                     });
                     Navigator.of(context).pop();
                   },
-                )).toList(),
+                )),
               ],
             ),
           ),
@@ -528,66 +583,11 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
       },
     );
   }
-}
 
-// Dummy BlockPicker for demonstration. In a real app, use a proper color picker library.
-class BlockPicker extends StatelessWidget {
-  final Color pickerColor;
-  final ValueChanged<Color> onColorChanged;
-
-  const BlockPicker({
-    Key? key,
-    required this.pickerColor,
-    required this.onColorChanged,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Wrap(
-          spacing: 8.0,
-          runSpacing: 8.0,
-          children: <Color>[
-            Colors.red,
-            Colors.pink,
-            Colors.purple,
-            Colors.deepPurple,
-            Colors.indigo,
-            Colors.blue,
-            Colors.lightBlue,
-            Colors.cyan,
-            Colors.teal,
-            Colors.green,
-            Colors.lightGreen,
-            Colors.lime,
-            Colors.yellow,
-            Colors.amber,
-            Colors.orange,
-            Colors.deepOrange,
-            Colors.brown,
-            Colors.grey,
-            Colors.blueGrey,
-            Colors.black,
-            Colors.white,
-          ].map((color) => GestureDetector(
-            onTap: () => onColorChanged(color),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: pickerColor == color ? Colors.black : Colors.transparent,
-                  width: 2,
-                ),
-              ),
-            ),
-          )).toList(),
-        ),
-      ],
-    );
+  void _updateNotesList(List<NoteEntity> newNotes) {
+    setState(() {
+      _notes = newNotes;
+    });
   }
 }
 
