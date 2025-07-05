@@ -58,21 +58,26 @@ class _CustomInputState extends State<CustomInput> with SingleTickerProviderStat
       ),
       child: Stack(
         children: [
-          TextField(
-            controller: widget.controller,
-            focusNode: _focusNode,
-            maxLines: widget.maxLines,
-            minLines: widget.minLines,
-            style: Theme.of(context).textTheme.bodyLarge, // Use theme text style
-            decoration: InputDecoration(
-              hintText: widget.hintText,
-              hintStyle: TextStyle(color: Theme.of(context).colorScheme.tertiary),
-              border: baseBorder,
-              enabledBorder: baseBorder,
-              focusedBorder: baseBorder,
-              filled: widget.filled, // Apply filled to InputDecoration
-              fillColor: widget.fillColor, // Apply fillColor to InputDecoration
-              contentPadding: widget.contentPadding, // Apply custom content padding
+          Semantics(
+            label: widget.hintText,
+            hint: 'حقل إدخال نص',
+            textField: true,
+            child: TextField(
+              controller: widget.controller,
+              focusNode: _focusNode,
+              maxLines: widget.maxLines,
+              minLines: widget.minLines,
+              style: Theme.of(context).textTheme.bodyLarge, // Use theme text style
+              decoration: InputDecoration(
+                hintText: widget.hintText,
+                hintStyle: TextStyle(color: Theme.of(context).colorScheme.tertiary),
+                border: baseBorder,
+                enabledBorder: baseBorder,
+                focusedBorder: baseBorder,
+                filled: widget.filled, // Apply filled to InputDecoration
+                fillColor: widget.fillColor, // Apply fillColor to InputDecoration
+                contentPadding: widget.contentPadding, // Apply custom content padding
+              ),
             ),
           ),
           Positioned.fill(

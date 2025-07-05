@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+
 import '../../domain/entities/note_entity.dart';
 import '../bloc/notes_bloc.dart';
 import '../bloc/notes_events.dart';
 import '../bloc/notes_states.dart';
-import '../widgets/tag_management_widget.dart';
 import '../widgets/notes_state_widgets.dart';
+import '../widgets/tag_management_widget.dart';
 
 /// Optimized note view page with extracted components and improved performance
 class OptimizedNoteViewPage extends StatefulWidget {
@@ -29,87 +30,6 @@ class _OptimizedNoteViewPageState extends State<OptimizedNoteViewPage>
   late Animation<Offset> _slideAnimation;
   
   NoteEntity? _currentNote;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeAnimations();
-    _loadNote();
-  }
-
-  @override
-  void dispose() {
-    _fadeAnimationController.dispose();
-    _slideAnimationController.dispose();
-    super.dispose();
-  }
-
-  void _initializeAnimations() {
-    _fadeAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    
-    _slideAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeAnimationController,
-      curve: Curves.easeIn,
-    ));
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideAnimationController,
-      curve: Curves.easeOutCubic,
-    ));
-
-    // Start animations
-    _fadeAnimationController.forward();
-    _slideAnimationController.forward();
-  }
-
-  void _loadNote() {
-    context.read<NotesBloc>().add(GetNoteByIdEvent(noteId: widget.noteId));
-  }
-
-  void _togglePin() {
-    if (_currentNote != null) {
-      context.read<NotesBloc>().add(TogglePinNoteEvent(note: _currentNote!));
-    }
-  }
-
-  void _deleteNote() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('حذف الملاحظة'),
-        content: const Text('هل أنت متأكد من حذف هذه الملاحظة؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('إلغاء'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              context.read<NotesBloc>().add(DeleteNoteEvent(noteId: widget.noteId));
-              Navigator.of(context).pop();
-              context.pop(); // Go back to notes list
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('حذف', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +68,20 @@ class _OptimizedNoteViewPageState extends State<OptimizedNoteViewPage>
     );
   }
 
+  @override
+  void dispose() {
+    _fadeAnimationController.dispose();
+    _slideAnimationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAnimations();
+    _loadNote();
+  }
+
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       title: const Text('عرض الملاحظة'),
@@ -165,7 +99,7 @@ class _OptimizedNoteViewPageState extends State<OptimizedNoteViewPage>
           ),
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed: () => context.go('/notes/edit/${widget.noteId}'),
+            onPressed: () => context.go('/notes/edit/${widget.noteId}', extra: _currentNote),
             tooltip: 'تعديل',
           ),
           IconButton(
@@ -202,6 +136,48 @@ class _OptimizedNoteViewPageState extends State<OptimizedNoteViewPage>
       child: SlideTransition(
         position: _slideAnimation,
         child: _buildNoteContent(),
+      ),
+    );
+  }
+
+  Widget _buildMetadataRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Colors.grey[600],
+            ),
+          ),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoteBody(NoteEntity note) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+      ),
+      child: Text(
+        note.content,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          height: 1.6,
+          fontSize: 16,
+        ),
       ),
     );
   }
@@ -266,49 +242,6 @@ class _OptimizedNoteViewPageState extends State<OptimizedNoteViewPage>
     );
   }
 
-  Widget _buildNoteBody(NoteEntity note) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
-      ),
-      child: Text(
-        note.content,
-        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-          height: 1.6,
-          fontSize: 16,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNoteTags(NoteEntity note) {
-    if (note.tags == null || note.tags!.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'العلامات',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TagManagementWidget(
-          note: note,
-          isReadOnly: false,
-          showAddButton: true,
-        ),
-      ],
-    );
-  }
-
   Widget _buildNoteMetadata(NoteEntity note) {
     final dateFormat = DateFormat('dd/MM/yyyy - HH:mm');
     
@@ -338,26 +271,94 @@ class _OptimizedNoteViewPageState extends State<OptimizedNoteViewPage>
     );
   }
 
-  Widget _buildMetadataRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.grey[600],
-            ),
+  Widget _buildNoteTags(NoteEntity note) {
+    if (note.tags == null || note.tags!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'العلامات',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
           ),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
+        ),
+        const SizedBox(height: 8),
+        TagManagementWidget(
+          note: note,
+          isReadOnly: false,
+          showAddButton: true,
+        ),
+      ],
+    );
+  }
+
+  void _deleteNote() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('حذف الملاحظة'),
+        content: const Text('هل أنت متأكد من حذف هذه الملاحظة؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              context.read<NotesBloc>().add(DeleteNoteEvent(noteId: widget.noteId));
+              Navigator.of(context).pop();
+              context.pop(); // Go back to notes list
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('حذف', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
+  }
+
+  void _initializeAnimations() {
+    _fadeAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    
+    _slideAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeAnimationController,
+      curve: Curves.easeIn,
+    ));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideAnimationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    // Start animations
+    _fadeAnimationController.forward();
+    _slideAnimationController.forward();
+  }
+
+  void _loadNote() {
+    context.read<NotesBloc>().add(GetNoteByIdEvent(noteId: widget.noteId));
+  }
+
+  void _togglePin() {
+    if (_currentNote != null) {
+      context.read<NotesBloc>().add(TogglePinNoteEvent(note: _currentNote!));
+    }
   }
 }

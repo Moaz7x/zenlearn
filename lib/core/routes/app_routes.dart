@@ -33,6 +33,9 @@ import '../../features/media_manager/presentation/pages/pdf_viewer_page.dart';
 import '../../features/media_manager/presentation/pages/picture_viewer_page.dart';
 import '../../features/media_manager/presentation/pages/video_viewer_page.dart';
 import '../../features/notes/domain/entities/note_entity.dart';
+import '../../features/notes/presentation/bloc/notes_bloc.dart';
+import '../../features/notes/presentation/bloc/notes_events.dart';
+import '../../features/notes/presentation/bloc/notes_states.dart';
 import '../../features/notes/presentation/pages/optimized_add_notes_page.dart';
 import '../../features/notes/presentation/pages/optimized_note_view_page.dart';
 import '../../features/notes/presentation/pages/optimized_notes_page.dart';
@@ -81,6 +84,25 @@ class AppRouter {
             builder: (context, state) {
               final NoteEntity? existingNote = state.extra as NoteEntity?;
               return OptimizedAddNotesPage(existingNote: existingNote);
+            },
+          ),
+          GoRoute(
+            path: 'edit/:noteId', // Path relative to /notes -> /notes/edit/:noteId
+            builder: (context, state) {
+              final noteId = state.pathParameters['noteId'];
+              final NoteEntity? existingNote = state.extra as NoteEntity?;
+
+              if (noteId == null) {
+                return const Text('Error: Note ID is missing');
+              }
+
+              // If existingNote is passed via extra, use it directly
+              if (existingNote != null) {
+                return OptimizedAddNotesPage(existingNote: existingNote);
+              }
+
+              // Otherwise, create a note fetcher widget that loads the note by ID
+              return _NoteEditLoader(noteId: noteId);
             },
           ),
           GoRoute(
@@ -306,4 +328,60 @@ class AppRouter {
   );
 
   static GoRouter get router => _router;
+}
+
+/// Widget that loads a note by ID and navigates to the edit page
+class _NoteEditLoader extends StatelessWidget {
+  final String noteId;
+
+  const _NoteEditLoader({required this.noteId});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<NotesBloc, NotesState>(
+      builder: (context, state) {
+        // Trigger loading the note by ID if not already loaded
+        context.read<NotesBloc>().add(GetNoteByIdEvent(noteId: noteId));
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('تحميل الملاحظة...'),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+          ),
+          body: BlocListener<NotesBloc, NotesState>(
+            listener: (context, state) {
+              if (state is NoteLoadedById) {
+                // Navigate to edit page with the loaded note
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => OptimizedAddNotesPage(existingNote: state.note),
+                  ),
+                );
+              } else if (state is NotesError) {
+                // Show error and go back
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('خطأ في تحميل الملاحظة: ${state.failure.toString()}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('جاري تحميل الملاحظة...'),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

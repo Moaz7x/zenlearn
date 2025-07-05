@@ -99,15 +99,44 @@ class _EnhancedFilterBarState extends State<EnhancedFilterBar>
   Widget _buildActiveFilterChip(String label, VoidCallback onRemove) {
     return Container(
       margin: const EdgeInsets.only(right: 8),
-      child: Chip(
-        label: Text(
-          label,
-          style: const TextStyle(fontSize: 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Theme.of(context).primaryColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Theme.of(context).primaryColor.withOpacity(0.3),
+            width: 1,
+          ),
         ),
-        deleteIcon: const Icon(Icons.close, size: 16),
-        onDeleted: onRemove,
-        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Theme.of(context).primaryColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 6),
+            GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.close,
+                  size: 12,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -115,20 +144,64 @@ class _EnhancedFilterBarState extends State<EnhancedFilterBar>
   Widget _buildColorFilterChip() {
     return Container(
       margin: const EdgeInsets.only(right: 8),
-      child: Chip(
-        avatar: Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            color: Color(widget.currentFilterColor!),
-            shape: BoxShape.circle,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Theme.of(context).primaryColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Theme.of(context).primaryColor.withOpacity(0.3),
+            width: 1,
           ),
         ),
-        label: const Text('لون', style: TextStyle(fontSize: 12)),
-        deleteIcon: const Icon(Icons.close, size: 16),
-        onDeleted: () => context.read<NotesBloc>().add(const ClearColorFilterEvent()),
-        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Color(widget.currentFilterColor!),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'لون',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Theme.of(context).primaryColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 6),
+            GestureDetector(
+              onTap: () => context.read<NotesBloc>().add(const ClearColorFilterEvent()),
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.close,
+                  size: 12,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -255,11 +328,15 @@ class _EnhancedFilterBarState extends State<EnhancedFilterBar>
             color: Theme.of(context).primaryColor,
           ),
           const SizedBox(width: 8),
-          Text(
-            'عرض ${widget.filteredNotesCount} من ${widget.totalNotesCount} ملاحظة',
-            style: TextStyle(
-              color: Theme.of(context).primaryColor,
-              fontWeight: FontWeight.w500,
+          Expanded(
+            child: Text(
+              'عرض ${widget.filteredNotesCount} من ${widget.totalNotesCount} ملاحظة',
+              style: TextStyle(
+                color: Theme.of(context).primaryColor,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
         ],
@@ -273,19 +350,25 @@ class _EnhancedFilterBarState extends State<EnhancedFilterBar>
       child: Row(
         children: [
           // Filter toggle button
-          IconButton(
-            icon: AnimatedRotation(
-              turns: _isExpanded ? 0.5 : 0,
-              duration: const Duration(milliseconds: 300),
-              child: Icon(
-                Icons.tune,
-                color: _hasActiveFilters 
-                    ? Theme.of(context).primaryColor 
-                    : Colors.grey[600],
+          Semantics(
+            label: _isExpanded ? 'إخفاء خيارات التصفية' : 'إظهار خيارات التصفية',
+            hint: 'اضغط لتوسيع أو طي خيارات التصفية',
+            button: true,
+            child: IconButton(
+              icon: AnimatedRotation(
+                turns: _isExpanded ? 0.5 : 0,
+                duration: const Duration(milliseconds: 300),
+                child: Icon(
+                  Icons.tune,
+                  color: _hasActiveFilters
+                      ? Theme.of(context).primaryColor
+                      : Colors.grey[600],
+                  semanticLabel: 'أيقونة التصفية',
+                ),
               ),
+              onPressed: _toggleExpanded,
+              tooltip: 'تصفية الملاحظات',
             ),
-            onPressed: _toggleExpanded,
-            tooltip: 'تصفية الملاحظات',
           ),
           
           // Active filters chips
@@ -313,9 +396,14 @@ class _EnhancedFilterBarState extends State<EnhancedFilterBar>
           
           // Clear all filters
           if (_hasActiveFilters)
-            TextButton(
-              onPressed: _clearAllFilters,
-              child: const Text('مسح الكل'),
+            Semantics(
+              label: 'مسح جميع المرشحات',
+              hint: 'اضغط لإزالة جميع المرشحات المطبقة',
+              button: true,
+              child: TextButton(
+                onPressed: _clearAllFilters,
+                child: const Text('مسح الكل'),
+              ),
             ),
           
           // Refresh button

@@ -173,40 +173,66 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
       margin: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(16.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 6,
             offset: const Offset(0, 2),
+            spreadRadius: 0,
           ),
         ],
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.1),
+          width: 1,
+        ),
       ),
-      child: TextField(
-        controller: _searchController,
-        enabled: widget.enabled,
-        textDirection: TextDirection.rtl,
-        decoration: InputDecoration(
-          hintText: widget.hintText,
-          hintStyle: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 16,
-          ),
-          prefixIcon: _isSearching
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: CircularProgressIndicator(strokeWidth: 2),
+      child: Semantics(
+        label: 'حقل البحث في الملاحظات',
+        hint: 'اكتب للبحث في الملاحظات',
+        textField: true,
+        child: TextField(
+          controller: _searchController,
+          enabled: widget.enabled,
+          textDirection: TextDirection.rtl,
+          decoration: InputDecoration(
+            hintText: widget.hintText,
+            hintStyle: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 16,
+            ),
+            prefixIcon: _isSearching
+                ? Semantics(
+                    label: 'جاري البحث',
+                    child: const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: Padding(
+                        padding: EdgeInsets.all(12.0),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  )
+                : Semantics(
+                    label: 'أيقونة البحث',
+                    child: const Icon(Icons.search, color: Colors.grey),
                   ),
-                )
-              : const Icon(Icons.search, color: Colors.grey),
           suffixIcon: _searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear, color: Colors.grey),
-                  onPressed: _clearSearch,
-                  tooltip: 'مسح البحث',
+              ? Semantics(
+                  label: 'مسح البحث',
+                  hint: 'اضغط لمسح نص البحث',
+                  button: true,
+                  child: IconButton(
+                    icon: const Icon(Icons.clear, color: Colors.grey),
+                    onPressed: _clearSearch,
+                    tooltip: 'مسح البحث',
+                  ),
                 )
               : null,
           border: OutlineInputBorder(
@@ -223,15 +249,15 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
         style: const TextStyle(fontSize: 16),
         textInputAction: TextInputAction.search,
         onSubmitted: (query) {
-          print('🔍 NotesSearchBar.onSubmitted: "$query"');
           _debounceTimer?.cancel();
           final trimmedQuery = query.trim();
 
-          // ✅ Notify parent immediately on submit
+          // Notify parent immediately on submit
           widget.onSearchChanged?.call(trimmedQuery);
 
           _performSearch(trimmedQuery);
         },
+        ),
       ),
     );
   }
@@ -252,10 +278,9 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
   }
 
   void _clearSearch() {
-    print('🧹 NotesSearchBar._clearSearch called');
     _searchController.clear();
 
-    // ✅ Notify parent about the cleared search
+    // Notify parent about the cleared search
     widget.onSearchChanged?.call('');
 
     // Call the onClear callback if provided
@@ -268,8 +293,6 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
   void _onSearchChanged() {
     final query = _searchController.text.trim();
 
-    print('🔍 NotesSearchBar._onSearchChanged: "$query"');
-
     // Cancel previous timer
     _debounceTimer?.cancel();
 
@@ -280,7 +303,7 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
       });
     }
 
-    // ✅ CRITICAL FIX: Notify parent immediately when text changes
+    // Notify parent immediately when text changes
     // This ensures the parent page knows about manual text deletion
     widget.onSearchChanged?.call(query);
 
@@ -293,8 +316,6 @@ class _NotesSearchBarState extends State<NotesSearchBar> {
   }
 
   void _performSearch(String query) {
-    print('🔍 NotesSearchBar._performSearch: "$query"');
-
     // The parent page handles BLoC interactions through onSearchChanged callback
     // We keep this for backward compatibility, but the main logic is in the parent
     if (query.isEmpty) {

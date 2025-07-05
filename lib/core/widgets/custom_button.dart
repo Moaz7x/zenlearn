@@ -56,102 +56,6 @@ class CustomButton extends StatefulWidget {
   _CustomButtonState createState() => _CustomButtonState();
 }
 
-class _CustomButtonState extends State<CustomButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _bottomAnimation;
-  late final Animation<double> _topAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _controller = AnimationController(
-      duration: widget.animationDuration,
-      vsync: this,
-    );
-
-    _bottomAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 0.5, curve: Curves.easeInOut),
-    );
-
-    _topAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.5, 1.0, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _handleTapDown(TapDownDetails details) {
-    _controller.forward();
-  }
-
-  void _handleTapUp(TapUpDetails details) {
-    _controller.reverse();
-  }
-
-  void _handleTapCancel() {
-    _controller.reverse();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final defaultTextStyle = TextStyle(
-      color: Theme.of(context).colorScheme.onPrimary, // Use theme color
-      fontSize: 18,
-      fontWeight: FontWeight.bold,
-    );
-    final textStyle = widget.textStyle ?? defaultTextStyle;
-
-    // Use an OutlineInputBorder as a base shape for the animated border.
-    final OutlineInputBorder baseBorder = OutlineInputBorder(
-      borderSide: BorderSide(color: Colors.transparent, width: widget.borderWidth),
-      borderRadius: BorderRadius.circular(widget.borderRadius),
-    );
-
-    return GestureDetector(
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-      onTapCancel: _handleTapCancel,
-      onTap: widget.onPressed,
-      onLongPress: widget.onLongPress,
-      child: Stack(
-        children: [
-          Container(
-            padding: widget.padding,
-            decoration: BoxDecoration(
-              color: widget.backgroundColor ?? Theme.of(context).colorScheme.primary, // Use theme color
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-            ),
-            child: Center(child: Text(widget.text, style: textStyle)),
-          ),
-          // The animated border overlay.
-          Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(
-                painter: SplitOutlinePainter(
-                  bottomAnimation: _bottomAnimation,
-                  topAnimation: _topAnimation,
-                  border: baseBorder,
-                  bottomBorderColor: widget.bottomBorderColor ?? Theme.of(context).colorScheme.secondary, // Use theme color
-                  topBorderColor: widget.topBorderColor ?? Theme.of(context).colorScheme.tertiary, // Use theme color
-                  borderWidth: widget.borderWidth,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// A custom painter that draws a split animated border.
 /// It uses two animations to animate the bottom and top halves of the border.
 class SplitOutlinePainter extends CustomPainter {
@@ -214,5 +118,107 @@ class SplitOutlinePainter extends CustomPainter {
         oldDelegate.bottomBorderColor != bottomBorderColor ||
         oldDelegate.topBorderColor != topBorderColor ||
         oldDelegate.borderWidth != borderWidth;
+  }
+}
+
+class _CustomButtonState extends State<CustomButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _bottomAnimation;
+  late final Animation<double> _topAnimation;
+
+  @override
+  Widget build(BuildContext context) {
+    final defaultTextStyle = TextStyle(
+      color: Theme.of(context).colorScheme.onPrimary, // Use theme color
+      fontSize: 18,
+      fontWeight: FontWeight.bold,
+    );
+    final textStyle = widget.textStyle ?? defaultTextStyle;
+
+    // Use an OutlineInputBorder as a base shape for the animated border.
+    final OutlineInputBorder baseBorder = OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.transparent, width: widget.borderWidth),
+      borderRadius: BorderRadius.circular(widget.borderRadius),
+    );
+
+    return Semantics(
+      label: widget.text,
+      hint: widget.onLongPress != null ? 'اضغط أو اضغط مطولاً للتفاعل' : 'اضغط للتفاعل',
+      button: true,
+      enabled: widget.onPressed != null,
+      child: GestureDetector(
+        onTapDown: _handleTapDown,
+        onTapUp: _handleTapUp,
+        onTapCancel: _handleTapCancel,
+        onTap: widget.onPressed,
+        onLongPress: widget.onLongPress,
+        child: Stack(
+        children: [
+          Container(
+            padding: widget.padding,
+            decoration: BoxDecoration(
+              color: widget.backgroundColor ?? Theme.of(context).colorScheme.primary, // Use theme color
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+            ),
+            child: Center(child: Text(widget.text, style: textStyle)),
+          ),
+          // The animated border overlay.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: SplitOutlinePainter(
+                  bottomAnimation: _bottomAnimation,
+                  topAnimation: _topAnimation,
+                  border: baseBorder,
+                  bottomBorderColor: widget.bottomBorderColor ?? Theme.of(context).colorScheme.secondary, // Use theme color
+                  topBorderColor: widget.topBorderColor ?? Theme.of(context).colorScheme.tertiary, // Use theme color
+                  borderWidth: widget.borderWidth,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      duration: widget.animationDuration,
+      vsync: this,
+    );
+
+    _bottomAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.5, curve: Curves.easeInOut),
+    );
+
+    _topAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.5, 1.0, curve: Curves.easeInOut),
+    );
+  }
+
+  void _handleTapCancel() {
+    _controller.reverse();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    _controller.forward();
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    _controller.reverse();
   }
 }

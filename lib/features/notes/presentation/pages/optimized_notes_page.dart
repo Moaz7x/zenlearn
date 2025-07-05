@@ -14,6 +14,8 @@ import '../widgets/enhanced_filter_bar.dart';
 import '../widgets/notes_list_widget.dart';
 import '../widgets/notes_search_bar.dart';
 import '../widgets/notes_state_widgets.dart';
+import '../widgets/responsive_layout.dart';
+import '../widgets/unified_note_card.dart';
 
 /// A grid view variant of the notes page
 class NotesGridPage extends StatelessWidget {
@@ -32,28 +34,28 @@ class NotesGridPage extends StatelessWidget {
                 if (state is NotesLoading) {
                   return const NotesLoadingWidget();
                 }
-                
+
                 if (state is NotesError) {
                   return NotesErrorWidget(
                     failure: state.failure,
                     onRetry: () => context.read<NotesBloc>().add(const LoadNotes()),
                   );
                 }
-                
+
                 if (state is NotesLoaded) {
                   if (state.notes.isEmpty) {
                     return NotesEmptyWidget(
                       onAction: () => context.go('/notes/add'),
                     );
                   }
-                  
+
                   return NotesGridWidget(
                     notes: state.notes,
                     crossAxisCount: 2,
                     padding: const EdgeInsets.all(16),
                   );
                 }
-                
+
                 return const NotesEmptyWidget();
               },
             ),
@@ -93,27 +95,27 @@ class SimpleNotesPage extends StatelessWidget {
                 if (state is NotesLoading) {
                   return const NotesLoadingWidget();
                 }
-                
+
                 if (state is NotesError) {
                   return NotesErrorWidget(
                     failure: state.failure,
                     onRetry: () => context.read<NotesBloc>().add(const LoadNotes()),
                   );
                 }
-                
+
                 if (state is NotesLoaded) {
                   if (state.notes.isEmpty) {
                     return NotesEmptyWidget(
                       onAction: () => context.go('/notes/add'),
                     );
                   }
-                  
+
                   return NotesListWidget(
                     notes: state.notes,
                     padding: const EdgeInsets.all(16),
                   );
                 }
-                
+
                 return const NotesEmptyWidget();
               },
             ),
@@ -132,7 +134,7 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
     with TickerProviderStateMixin, RouteAware {
 
   static const Duration _searchDebounceDelay = Duration(milliseconds: 300);
-  
+
   static const Duration _reorderDebounceDelay = Duration(milliseconds: 500);
   // Animation controllers
   late AnimationController _fabAnimationController;
@@ -163,80 +165,10 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'ملاحظاتي',
-      body: Column(
-        children: [
-          // Enhanced Search Bar
-          NotesSearchBar(
-            initialQuery: _searchQuery,
-            showSearchResults: _isSearching,
-            searchResultsCount: _isSearching ? _notes.length : 0,
-            onSearchChanged: (query) {
-              _handleSearchQueryChanged(query);
-            },
-            onClear: () {
-              _clearSearch();
-            },
-          ),
-          
-          // Enhanced Filter Bar
-          EnhancedFilterBar(
-            currentSortBy: _currentSortBy,
-            currentSortAscending: _currentSortAscending,
-            currentFilterColor: _currentFilterColor,
-            currentFilterTag: _currentFilterTag,
-            availableTags: _getAvailableTags(),
-            totalNotesCount: _allNotes.length,
-            filteredNotesCount: _notes.length,
-            onRefresh: _loadNotes,
-            slideAnimation: _filterSlideAnimation,
-          ),
-          
-          // Notes List
-          Expanded(
-            child: BlocConsumer<NotesBloc, NotesState>(
-              listener: (context, state) {
-                print('🎯 BLoC Listener - State received: ${state.runtimeType}');
-
-                if (state is NotesLoaded) {
-                  print('🎯 NotesLoaded - notes count: ${state.notes.length}');
-                  print('🎯 Before _updateNotesList: _isSearching=$_isSearching, _searchQuery="$_searchQuery"');
-
-                  _updateNotesList(state.notes);
-                  _currentSortBy = state.currentSortBy;
-                  _currentSortAscending = state.currentSortAscending ?? true;
-                  _currentFilterColor = state.currentFilterColor;
-                  _currentFilterTag = state.currentFilterTag;
-
-                  // Reset search state when loading regular notes (not search results)
-                  print('🎯 Calling _resetSearchState()');
-                  _resetSearchState();
-                  print('🎯 After _resetSearchState: _isSearching=$_isSearching');
-
-                } else if (state is NotesSearchLoaded) {
-                  print('🎯 NotesSearchLoaded - query: "${state.query}", results: ${state.searchResults.length}');
-                  // Handle search results
-                  setState(() {
-                    _notes = state.searchResults;
-                    _searchQuery = state.query;
-                    _isSearching = state.query.isNotEmpty;
-                    print('🎯 Search results setState: _isSearching=$_isSearching, _searchQuery="$_searchQuery"');
-                  });
-                } else if (state is NotesError) {
-                  print('🎯 NotesError received');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('حدث خطأ: ${_getErrorMessage(state.failure)}'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              builder: (context, state) {
-                return _buildNotesContent(state);
-              },
-            ),
-          ),
-        ],
+      body: ResponsiveLayout(
+        mobile: _buildMobileLayout(context),
+        tablet: _buildTabletLayout(context),
+        desktop: _buildDesktopLayout(context),
       ),
       floatingActionButton: ScaleTransition(
         scale: _fabScaleAnimation,
@@ -281,6 +213,303 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
     _loadNotes();
   }
 
+  /// Builds the desktop layout (optimized for large screens)
+  Widget _buildDesktopLayout(BuildContext context) {
+    return Row(
+      children: [
+        // Left sidebar with search and filters
+        SizedBox(
+          width: MediaQuery.of(context).size.width * 0.25, // 25% of screen width
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: NotesSearchBar(
+                  initialQuery: _searchQuery,
+                  showSearchResults: _isSearching,
+                  searchResultsCount: _isSearching ? _notes.length : 0,
+                  onSearchChanged: (query) {
+                    _handleSearchQueryChanged(query);
+                  },
+                  onClear: () {
+                    _clearSearch();
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: EnhancedFilterBar(
+                  currentSortBy: _currentSortBy,
+                  currentSortAscending: _currentSortAscending,
+                  currentFilterColor: _currentFilterColor,
+                  currentFilterTag: _currentFilterTag,
+                  availableTags: _getAvailableTags(),
+                  totalNotesCount: _allNotes.length,
+                  filteredNotesCount: _notes.length,
+                  onRefresh: _loadNotes,
+                  slideAnimation: _filterSlideAnimation,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Vertical divider
+        const VerticalDivider(width: 1),
+
+        // Main content area with grid layout for desktop
+        Expanded(
+          child: BlocConsumer<NotesBloc, NotesState>(
+            listener: (context, state) {
+              if (state is NotesLoaded) {
+                _updateNotesList(state.notes);
+                _currentSortBy = state.currentSortBy;
+                _currentSortAscending = state.currentSortAscending ?? true;
+                _currentFilterColor = state.currentFilterColor;
+                _currentFilterTag = state.currentFilterTag;
+
+                // Reset search state when loading regular notes (not search results)
+                _resetSearchState();
+
+              } else if (state is NotesSearchLoaded) {
+                // Handle search results
+                setState(() {
+                  _notes = state.searchResults;
+                  _searchQuery = state.query;
+                  _isSearching = state.query.isNotEmpty;
+                });
+              } else if (state is NotesError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('حدث خطأ: ${_getErrorMessage(state.failure)}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            builder: (context, state) {
+              return _buildDesktopNotesContent(state);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Builds the desktop notes content with grid layout
+  Widget _buildDesktopNotesContent(NotesState state) {
+    // Handle loading states
+    if (state is NotesLoading) {
+      if (_notes.isEmpty) {
+        final message = _isSearching
+            ? 'جاري البحث في الملاحظات...'
+            : 'جاري تحميل الملاحظات...';
+        return NotesLoadingWidget(message: message);
+      } else {
+        return Stack(
+          children: [
+            _buildDesktopNotesList(),
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: LinearProgressIndicator(),
+            ),
+          ],
+        );
+      }
+    }
+
+    if (state is NotesError) {
+      if (_notes.isEmpty) {
+        return NotesErrorWidget(
+          customMessage: _getErrorMessage(state.failure),
+          onRetry: _loadNotes,
+        );
+      } else {
+        return Column(
+          children: [
+            Container(
+              color: Colors.red[100],
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                children: [
+                  Icon(Icons.error, color: Colors.red[700]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'خطأ في التحديث: ${_getErrorMessage(state.failure)}',
+                      style: TextStyle(color: Colors.red[700]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: _buildDesktopNotesList()),
+          ],
+        );
+      }
+    }
+
+    if (state is NotesSearchLoaded && state.searchResults.isEmpty) {
+      if (_searchQuery.isNotEmpty) {
+        return NotesSearchEmptyWidget(
+          searchQuery: _searchQuery,
+          onClearSearch: _clearSearch,
+        );
+      }
+      return _buildDesktopNotesList();
+    }
+
+    if (_notes.isEmpty) {
+      if (_isSearching && _searchQuery.isNotEmpty) {
+        return NotesSearchEmptyWidget(
+          searchQuery: _searchQuery,
+          onClearSearch: _clearSearch,
+        );
+      }
+
+      if (_currentFilterColor != null || _currentFilterTag != null) {
+        final filterType = _currentFilterTag != null ? 'العلامة' : 'اللون';
+        final filterValue = _currentFilterTag ?? 'اللون المحدد';
+
+        return NotesFilterEmptyWidget(
+          filterType: filterType,
+          filterValue: filterValue,
+          onClearFilter: () {
+            context.read<NotesBloc>().add(const ClearTagFilterEvent());
+            context.read<NotesBloc>().add(const ClearColorFilterEvent());
+          },
+        );
+      }
+
+      return NotesEmptyWidget(
+        onAction: () => context.go('/notes/add'),
+      );
+    }
+
+    return _buildDesktopNotesList();
+  }
+
+  /// Builds the desktop notes list with grid layout
+  Widget _buildDesktopNotesList() {
+    return RefreshIndicator(
+      onRefresh: () async {
+        if (_isSearching && _searchQuery.isNotEmpty) {
+          context.read<NotesBloc>().add(SearchNotesEvent(query: _searchQuery));
+        } else {
+          _loadNotes();
+        }
+      },
+      child: _buildDesktopReorderableNotesList(),
+    );
+  }
+
+
+
+  /// Builds the desktop reorderable notes list with grid layout
+  Widget _buildDesktopReorderableNotesList() {
+    final canReorder = !_isSearching &&
+                      _currentFilterColor == null &&
+                      _currentFilterTag == null;
+
+    if (!canReorder) {
+      // Use grid layout for desktop when reordering is disabled
+      return ResponsiveGrid(
+        key: const ValueKey('desktop_notes_grid'),
+        desktopColumns: 3,
+        tabletColumns: 2,
+        mobileColumns: 1,
+        spacing: 16,
+        runSpacing: 16,
+        children: _notes.asMap().entries.map((entry) {
+          final index = entry.key;
+          final note = entry.value;
+          return UnifiedNoteCard(
+            key: ValueKey('desktop_note_${note.id}'),
+            note: note,
+            index: index,
+            canReorder: false,
+          );
+        }).toList(),
+      );
+    }
+
+    // For reorderable desktop view, use a custom grid with sections
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        // Pinned notes section
+        if (_pinnedNotes.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: _buildSectionHeader('الملاحظات المثبتة', _pinnedNotes.length),
+          ),
+          SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.2,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                if (index >= _pinnedNotes.length) {
+                  return const SizedBox.shrink();
+                }
+
+                return UnifiedNoteCard(
+                  key: ValueKey('pinned_${_pinnedNotes[index].id}_${_pinnedNotes[index].hashCode}'),
+                  note: _pinnedNotes[index],
+                  index: index,
+                  canReorder: true,
+                  isPinnedSection: true,
+                );
+              },
+              childCount: _pinnedNotes.length,
+            ),
+          ),
+        ],
+
+        // Unpinned notes section
+        if (_unpinnedNotes.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: _buildSectionHeader('الملاحظات العادية', _unpinnedNotes.length),
+          ),
+          SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.2,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                if (index >= _unpinnedNotes.length) {
+                  return const SizedBox.shrink();
+                }
+
+                return UnifiedNoteCard(
+                  key: ValueKey('unpinned_${_unpinnedNotes[index].id}_${_unpinnedNotes[index].hashCode}'),
+                  note: _unpinnedNotes[index],
+                  index: index,
+                  canReorder: true,
+                  isPinnedSection: false,
+                );
+              },
+              childCount: _unpinnedNotes.length,
+            ),
+          ),
+        ],
+
+        // Empty state if no notes
+        if (_pinnedNotes.isEmpty && _unpinnedNotes.isEmpty)
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 200),
+          ),
+      ],
+    );
+  }
+
 
 
   /// Builds a drag handle that enables dragging only when pressed
@@ -298,7 +527,81 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
     );
   }
 
+  /// Builds the mobile layout (single column)
+  Widget _buildMobileLayout(BuildContext context) {
+    return Column(
+      children: [
+        // Enhanced Search Bar
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: NotesSearchBar(
+            initialQuery: _searchQuery,
+            showSearchResults: _isSearching,
+            searchResultsCount: _isSearching ? _notes.length : 0,
+            onSearchChanged: (query) {
+              _handleSearchQueryChanged(query);
+            },
+            onClear: () {
+              _clearSearch();
+            },
+          ),
+        ),
 
+        // Enhanced Filter Bar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: EnhancedFilterBar(
+            currentSortBy: _currentSortBy,
+            currentSortAscending: _currentSortAscending,
+            currentFilterColor: _currentFilterColor,
+            currentFilterTag: _currentFilterTag,
+            availableTags: _getAvailableTags(),
+            totalNotesCount: _allNotes.length,
+            filteredNotesCount: _notes.length,
+            onRefresh: _loadNotes,
+            slideAnimation: _filterSlideAnimation,
+          ),
+        ),
+
+        // Notes List
+        Expanded(
+          child: BlocConsumer<NotesBloc, NotesState>(
+              listener: (context, state) {
+                if (state is NotesLoaded) {
+                  _updateNotesList(state.notes);
+                  _currentSortBy = state.currentSortBy;
+                  _currentSortAscending = state.currentSortAscending ?? true;
+                  _currentFilterColor = state.currentFilterColor;
+                  _currentFilterTag = state.currentFilterTag;
+
+                  // Reset search state when loading regular notes (not search results)
+                  _resetSearchState();
+
+                } else if (state is NotesSearchLoaded) {
+                  // Handle search results
+                  setState(() {
+                    _notes = state.searchResults;
+                    _searchQuery = state.query;
+                    _isSearching = state.query.isNotEmpty;
+                  });
+                } else if (state is NotesError) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('حدث خطأ: ${_getErrorMessage(state.failure)}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              builder: (context, state) {
+                return _buildNotesContent(state);
+              },
+            ),
+          ),
+        ],
+      );
+    
+  }
 
   /// Builds the trailing widget for note cards (pin icon + optional drag handle)
   Widget _buildNoteCardTrailing(NoteEntity note, bool canReorder, int index) {
@@ -357,7 +660,7 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
       }
       return _buildNotesList();
     }
-    
+
     if (_notes.isEmpty) {
       if (_isSearching && _searchQuery.isNotEmpty) {
         return NotesSearchEmptyWidget(
@@ -365,11 +668,11 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
           onClearSearch: _clearSearch,
         );
       }
-      
+
       if (_currentFilterColor != null || _currentFilterTag != null) {
         final filterType = _currentFilterTag != null ? 'العلامة' : 'اللون';
         final filterValue = _currentFilterTag ?? 'اللون المحدد';
-        
+
         return NotesFilterEmptyWidget(
           filterType: filterType,
           filterValue: filterValue,
@@ -379,12 +682,12 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
           },
         );
       }
-      
+
       return NotesEmptyWidget(
         onAction: () => context.go('/notes/add'),
       );
     }
-    
+
     return _buildNotesList();
   }
 
@@ -410,25 +713,19 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
                       _currentFilterColor == null &&
                       _currentFilterTag == null;
 
-    print('🏗️ _buildReorderableNotesList called');
-    print('🏗️ _isSearching: $_isSearching');
-    print('🏗️ _currentFilterColor: $_currentFilterColor');
-    print('🏗️ _currentFilterTag: $_currentFilterTag');
-    print('🏗️ canReorder: $canReorder');
-    print('🏗️ _notes.length: ${_notes.length}');
-    print('🏗️ _pinnedNotes.length: ${_pinnedNotes.length}');
-    print('🏗️ _unpinnedNotes.length: ${_unpinnedNotes.length}');
-
     if (!canReorder) {
-      print('🏗️ Rendering ListView.builder (non-reorderable)');
       // Use unified note cards when reordering is disabled
       return ListView.builder(
+        key: const ValueKey('notes_list_non_reorderable'),
         padding: const EdgeInsets.all(16),
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: _notes.length,
+        cacheExtent: 500, // Cache 500 pixels ahead for smooth scrolling
         itemBuilder: (context, index) {
-          return _buildUnifiedNoteCard(
-            note: _notes[index],
+          final note = _notes[index];
+          return UnifiedNoteCard(
+            key: ValueKey('note_${note.id}'),
+            note: note,
             index: index,
             canReorder: false,
           );
@@ -436,8 +733,7 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
       );
     }
 
-    print('🏗️ Rendering CustomScrollView with SliverReorderableList (reorderable)');
-    // Continue with reorderable view...
+    // Continue with reorderable view
 
     return Stack(
       children: [
@@ -586,6 +882,89 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
     );
   }
 
+  /// Builds the tablet layout (optimized for medium screens)
+  Widget _buildTabletLayout(BuildContext context) {
+    return Row(
+      children: [
+        // Left sidebar with search and filters
+        SizedBox(
+          width: MediaQuery.of(context).size.width * 0.3, // 30% of screen width
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: NotesSearchBar(
+                  initialQuery: _searchQuery,
+                  showSearchResults: _isSearching,
+                  searchResultsCount: _isSearching ? _notes.length : 0,
+                  onSearchChanged: (query) {
+                    _handleSearchQueryChanged(query);
+                  },
+                  onClear: () {
+                    _clearSearch();
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: EnhancedFilterBar(
+                  currentSortBy: _currentSortBy,
+                  currentSortAscending: _currentSortAscending,
+                  currentFilterColor: _currentFilterColor,
+                  currentFilterTag: _currentFilterTag,
+                  availableTags: _getAvailableTags(),
+                  totalNotesCount: _allNotes.length,
+                  filteredNotesCount: _notes.length,
+                  onRefresh: _loadNotes,
+                  slideAnimation: _filterSlideAnimation,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Vertical divider
+        const VerticalDivider(width: 1),
+
+        // Main content area
+        Expanded(
+          child: BlocConsumer<NotesBloc, NotesState>(
+            listener: (context, state) {
+              if (state is NotesLoaded) {
+                _updateNotesList(state.notes);
+                _currentSortBy = state.currentSortBy;
+                _currentSortAscending = state.currentSortAscending ?? true;
+                _currentFilterColor = state.currentFilterColor;
+                _currentFilterTag = state.currentFilterTag;
+
+                // Reset search state when loading regular notes (not search results)
+                _resetSearchState();
+
+              } else if (state is NotesSearchLoaded) {
+                // Handle search results
+                setState(() {
+                  _notes = state.searchResults;
+                  _searchQuery = state.query;
+                  _isSearching = state.query.isNotEmpty;
+                });
+              } else if (state is NotesError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('حدث خطأ: ${_getErrorMessage(state.failure)}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            builder: (context, state) {
+              return _buildNotesContent(state);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Builds a unified note card that works for both reorderable and non-reorderable lists
   Widget _buildUnifiedNoteCard({
     required NoteEntity note,
@@ -661,7 +1040,6 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
 
   /// Clears the search and reloads all notes
   void _clearSearch() {
-    print('🧹 _clearSearch called');
     _searchDebounceTimer?.cancel();
 
     setState(() {
@@ -725,28 +1103,21 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
 
   /// Handles search query changes with debouncing
   void _handleSearchQueryChanged(String query) {
-    print('🔍 _handleSearchQueryChanged called with query: "$query"');
-    print('🔍 Current _isSearching: $_isSearching');
-
     // Cancel previous timer if it exists
     _searchDebounceTimer?.cancel();
 
     // Trim the query to handle whitespace-only input
     final trimmedQuery = query.trim();
-    print('🔍 Trimmed query: "$trimmedQuery"');
 
     setState(() {
       _searchQuery = trimmedQuery;
       _isSearching = trimmedQuery.isNotEmpty;
-      print('🔍 setState: _searchQuery="$_searchQuery", _isSearching=$_isSearching');
     });
 
     if (trimmedQuery.isEmpty) {
-      print('🔍 Query is empty - clearing search state and loading notes');
       // If query is empty, clear search state and load all notes immediately
       setState(() {
         _isSearching = false;
-        print('🔍 Final setState: _isSearching=$_isSearching');
       });
 
       // Force immediate restoration of reorderable view
@@ -754,11 +1125,9 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
       return;
     }
 
-    print('🔍 Starting debounce timer for search');
     // Start new debounce timer for non-empty queries
     _searchDebounceTimer = Timer(_searchDebounceDelay, () {
       if (mounted && trimmedQuery.isNotEmpty) {
-        print('🔍 Debounce timer fired - triggering SearchNotesEvent');
         // Trigger search event
         context.read<NotesBloc>().add(SearchNotesEvent(query: trimmedQuery));
       }
@@ -848,36 +1217,23 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
 
   /// Resets search state to ensure proper reorderable view restoration
   void _resetSearchState() {
-    print('🔄 _resetSearchState called');
-    print('🔄 _searchQuery: "$_searchQuery"');
-    print('🔄 _isSearching: $_isSearching');
-
     if (_searchQuery.isEmpty && _isSearching) {
-      print('🔄 Resetting _isSearching to false');
       setState(() {
         _isSearching = false;
       });
-      print('🔄 After setState: _isSearching=$_isSearching');
-    } else {
-      print('🔄 No reset needed - conditions not met');
     }
   }
 
   /// Forces immediate restoration of reorderable view when search is cleared
   void _restoreReorderableView() {
-    print('🔄 _restoreReorderableView called');
-
     // If we have cached notes, use them immediately
     if (_allNotes.isNotEmpty) {
-      print('🔄 Using cached _allNotes (${_allNotes.length} notes)');
       setState(() {
         _notes = List.from(_allNotes);
         _isSearching = false;
       });
       _separateNotesByPinnedStatus();
-      print('🔄 Immediate restoration complete');
     } else {
-      print('🔄 No cached notes - triggering LoadNotes()');
       context.read<NotesBloc>().add(const LoadNotes());
     }
   }
@@ -892,20 +1248,15 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
   }
 
   void _updateNotesList(List<NoteEntity> notes) {
-    print('📝 _updateNotesList called with ${notes.length} notes');
-    print('📝 Current _isSearching: $_isSearching');
-
     if (mounted) {
       setState(() {
         _notes = notes;
         // Update all notes if this is not a filtered/search result
         if (!_isSearching && _currentFilterColor == null && _currentFilterTag == null) {
           _allNotes = List.from(notes);
-          print('📝 Updated _allNotes with ${_allNotes.length} notes');
         }
         // Separate pinned and unpinned notes for reordering
         _separateNotesByPinnedStatus();
-        print('📝 After separation: _pinnedNotes=${_pinnedNotes.length}, _unpinnedNotes=${_unpinnedNotes.length}');
       });
     }
   }
