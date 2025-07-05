@@ -2,6 +2,16 @@ import 'package:equatable/equatable.dart';
 
 import '../../domain/entities/note_entity.dart';
 
+class AddTagToNoteEvent extends NotesEvent {
+  final NoteEntity note;
+  final String tag;
+
+  const AddTagToNoteEvent({required this.note, required this.tag});
+
+  @override
+  List<Object> get props => [note, tag];
+}
+
 /// Event to change the color of a note.
 class ChangeNoteColorEvent extends NotesEvent {
   final NoteEntity note;
@@ -11,6 +21,20 @@ class ChangeNoteColorEvent extends NotesEvent {
 
   @override
   List<Object> get props => [note, newColor];
+}
+
+class ClearColorFilterEvent extends NotesEvent {
+  const ClearColorFilterEvent();
+
+  @override
+  List<Object> get props => [];
+}
+
+class ClearTagFilterEvent extends NotesEvent {
+  const ClearTagFilterEvent();
+
+  @override
+  List<Object> get props => [];
 }
 
 /// Event to create a new note.
@@ -31,6 +55,24 @@ class DeleteNoteEvent extends NotesEvent {
 
   @override
   List<Object> get props => [noteId];
+}
+
+class FilterNotesByColorEvent extends NotesEvent {
+  final int? color;
+
+  const FilterNotesByColorEvent({this.color});
+
+  @override
+  List<Object?> get props => [color];
+}
+
+class FilterNotesByTagEvent extends NotesEvent {
+  final String tag;
+
+  const FilterNotesByTagEvent({required this.tag});
+
+  @override
+  List<Object> get props => [tag];
 }
 
 class GetNoteByIdEvent extends NotesEvent {
@@ -74,6 +116,16 @@ abstract class NotesEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+class RemoveTagFromNoteEvent extends NotesEvent {
+  final NoteEntity note;
+  final String tag;
+
+  const RemoveTagFromNoteEvent({required this.note, required this.tag});
+
+  @override
+  List<Object> get props => [note, tag];
+}
+
 /// Event to reorder notes.
 class ReorderNotesEvent extends NotesEvent {
   final int oldIndex;
@@ -95,6 +147,16 @@ class SearchNotesEvent extends NotesEvent {
   List<Object> get props => [query];
 }
 
+class SortNotesEvent extends NotesEvent {
+  final String sortBy;
+  final bool ascending;
+
+  const SortNotesEvent({required this.sortBy, this.ascending = true});
+
+  @override
+  List<Object> get props => [sortBy, ascending];
+}
+
 /// Event to toggle the pinned status of a note.
 class TogglePinNoteEvent extends NotesEvent {
   final NoteEntity note;
@@ -113,54 +175,6 @@ class UpdateNoteEvent extends NotesEvent {
 
   @override
   List<Object> get props => [note];
-}
-
-class AddTagToNoteEvent extends NotesEvent {
-  final NoteEntity note;
-  final String tag;
-
-  const AddTagToNoteEvent({required this.note, required this.tag});
-
-  @override
-  List<Object> get props => [note, tag];
-}
-
-class RemoveTagFromNoteEvent extends NotesEvent {
-  final NoteEntity note;
-  final String tag;
-
-  const RemoveTagFromNoteEvent({required this.note, required this.tag});
-
-  @override
-  List<Object> get props => [note, tag];
-}
-
-class FilterNotesByTagEvent extends NotesEvent {
-  final String tag;
-
-  const FilterNotesByTagEvent({required this.tag});
-
-  @override
-  List<Object> get props => [tag];
-}
-
-class SortNotesEvent extends NotesEvent {
-  final String sortBy;
-  final bool ascending;
-
-  const SortNotesEvent({required this.sortBy, this.ascending = true});
-
-  @override
-  List<Object> get props => [sortBy, ascending];
-}
-
-class FilterNotesByColorEvent extends NotesEvent {
-  final int? color;
-
-  const FilterNotesByColorEvent({this.color});
-
-  @override
-  List<Object?> get props => [color];
 }
 
 

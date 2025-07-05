@@ -517,8 +517,9 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
               onPressed: () {
                 setState(() {
                   _currentFilterColor = null;
-                  _loadNotes();
                 });
+                // Use the dedicated clear filter event for better architecture
+                context.read<NotesBloc>().add(const ClearColorFilterEvent());
                 Navigator.of(context).pop();
               },
             ),
@@ -567,8 +568,9 @@ class _NotesPageState extends State<NotesPage> with RouteAware, TickerProviderSt
               onPressed: () {
                 setState(() {
                   _currentFilterTag = null;
-                  _loadNotes();
                 });
+                // Use the dedicated clear filter event for better architecture
+                context.read<NotesBloc>().add(const ClearTagFilterEvent());
                 Navigator.of(context).pop();
               },
             ),

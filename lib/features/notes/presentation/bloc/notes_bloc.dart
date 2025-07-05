@@ -47,6 +47,29 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     on<SortNotesEvent>(_onSortNotes);
     on<FilterNotesByColorEvent>(_onFilterNotesByColor);
     on<FilterNotesByTagEvent>(_onFilterNotesByTag);
+    on<ClearTagFilterEvent>(_onClearTagFilter);
+    on<ClearColorFilterEvent>(_onClearColorFilter);
+  }
+
+  Future<void> _onAddTagToNote(AddTagToNoteEvent event, Emitter<NotesState> emit) async {
+    final currentTags = event.note.tags?.toList() ?? [];
+    if (!currentTags.contains(event.tag)) {
+      currentTags.add(event.tag);
+      final updatedNote = event.note.copyWith(tags: currentTags);
+      final result = await updateNoteUseCase(UpdateNoteParams(note: updatedNote));
+      result.fold(
+        (failure) => emit(NotesError(failure: failure)),
+        (note) {
+          emit(NoteUpdatedSuccess(note: note));
+          add(LoadNotes(
+            sortBy: _currentSortBy,
+            sortAscending: _currentSortAscending,
+            filterColor: _currentFilterColor,
+            filterTag: _currentFilterTag,
+          ));
+        },
+      );
+    }
   }
 
   Future<void> _onChangeNoteColor(ChangeNoteColorEvent event, Emitter<NotesState> emit) async {
@@ -64,6 +87,26 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
         ));
       },
     );
+  }
+
+  Future<void> _onClearColorFilter(ClearColorFilterEvent event, Emitter<NotesState> emit) async {
+    _currentFilterColor = null;
+    add(LoadNotes(
+      sortBy: _currentSortBy,
+      sortAscending: _currentSortAscending,
+      filterColor: _currentFilterColor,
+      filterTag: _currentFilterTag,
+    ));
+  }
+
+  Future<void> _onClearTagFilter(ClearTagFilterEvent event, Emitter<NotesState> emit) async {
+    _currentFilterTag = null;
+    add(LoadNotes(
+      sortBy: _currentSortBy,
+      sortAscending: _currentSortAscending,
+      filterColor: _currentFilterColor,
+      filterTag: _currentFilterTag,
+    ));
   }
 
   Future<void> _onCreateNote(CreateNoteEvent event, Emitter<NotesState> emit) async {
@@ -101,6 +144,26 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     ));
   }
 
+  Future<void> _onFilterNotesByColor(FilterNotesByColorEvent event, Emitter<NotesState> emit) async {
+    _currentFilterColor = event.color;
+    add(LoadNotes(
+      sortBy: _currentSortBy,
+      sortAscending: _currentSortAscending,
+      filterColor: _currentFilterColor,
+      filterTag: _currentFilterTag,
+    ));
+  }
+
+  Future<void> _onFilterNotesByTag(FilterNotesByTagEvent event, Emitter<NotesState> emit) async {
+    _currentFilterTag = event.tag;
+    add(LoadNotes(
+      sortBy: _currentSortBy,
+      sortAscending: _currentSortAscending,
+      filterColor: _currentFilterColor,
+      filterTag: _currentFilterTag,
+    ));
+  }
+
   Future<void> _onGetNoteById(GetNoteByIdEvent event, Emitter<NotesState> emit) async {
     emit(const NotesLoading());
     final result = await getNoteByIdUseCase(GetNoteByIdParams(id: event.noteId));
@@ -115,8 +178,8 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
 
     _currentSortBy = event.sortBy ?? _currentSortBy;
     _currentSortAscending = event.sortAscending ?? _currentSortAscending;
-        _currentFilterColor = event.filterColor; // Directly assign, don't use ??
-    _currentFilterTag = event.filterTag ?? _currentFilterTag;
+    _currentFilterColor = event.filterColor; // Directly assign, don't use ??
+    _currentFilterTag = event.filterTag; // Directly assign to allow clearing filter
 
     final result = await getNotesUseCase(NoParams());
     result.fold(
@@ -172,6 +235,27 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     );
   }
 
+  Future<void> _onRemoveTagFromNote(RemoveTagFromNoteEvent event, Emitter<NotesState> emit) async {
+    final currentTags = event.note.tags?.toList() ?? [];
+    if (currentTags.contains(event.tag)) {
+      currentTags.remove(event.tag);
+      final updatedNote = event.note.copyWith(tags: currentTags);
+      final result = await updateNoteUseCase(UpdateNoteParams(note: updatedNote));
+      result.fold(
+        (failure) => emit(NotesError(failure: failure)),
+        (note) {
+          emit(NoteUpdatedSuccess(note: note));
+          add(LoadNotes(
+            sortBy: _currentSortBy,
+            sortAscending: _currentSortAscending,
+            filterColor: _currentFilterColor,
+            filterTag: _currentFilterTag,
+          ));
+        },
+      );
+    }
+  }
+
   Future<void> _onReorderNotes(ReorderNotesEvent event, Emitter<NotesState> emit) async {
     final notes = List<NoteEntity>.from(event.notes);
 
@@ -224,6 +308,17 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     );
   }
 
+  Future<void> _onSortNotes(SortNotesEvent event, Emitter<NotesState> emit) async {
+    _currentSortBy = event.sortBy;
+    _currentSortAscending = event.ascending;
+    add(LoadNotes(
+      sortBy: _currentSortBy,
+      sortAscending: _currentSortAscending,
+      filterColor: _currentFilterColor,
+      filterTag: _currentFilterTag,
+    ));
+  }
+
   Future<void> _onTogglePinNote(TogglePinNoteEvent event, Emitter<NotesState> emit) async {
     final updatedNote = event.note.copyWith(isPinned: !event.note.isPinned);
     final result = await updateNoteUseCase(UpdateNoteParams(note: updatedNote));
@@ -249,79 +344,6 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
       (failure) => emit(NotesError(failure: failure)),
       (note) => emit(NoteUpdatedSuccess(note: note)),
     );
-    add(LoadNotes(
-      sortBy: _currentSortBy,
-      sortAscending: _currentSortAscending,
-      filterColor: _currentFilterColor,
-      filterTag: _currentFilterTag,
-    ));
-  }
-
-  Future<void> _onAddTagToNote(AddTagToNoteEvent event, Emitter<NotesState> emit) async {
-    final currentTags = event.note.tags?.toList() ?? [];
-    if (!currentTags.contains(event.tag)) {
-      currentTags.add(event.tag);
-      final updatedNote = event.note.copyWith(tags: currentTags);
-      final result = await updateNoteUseCase(UpdateNoteParams(note: updatedNote));
-      result.fold(
-        (failure) => emit(NotesError(failure: failure)),
-        (note) {
-          emit(NoteUpdatedSuccess(note: note));
-          add(LoadNotes(
-            sortBy: _currentSortBy,
-            sortAscending: _currentSortAscending,
-            filterColor: _currentFilterColor,
-            filterTag: _currentFilterTag,
-          ));
-        },
-      );
-    }
-  }
-
-  Future<void> _onRemoveTagFromNote(RemoveTagFromNoteEvent event, Emitter<NotesState> emit) async {
-    final currentTags = event.note.tags?.toList() ?? [];
-    if (currentTags.contains(event.tag)) {
-      currentTags.remove(event.tag);
-      final updatedNote = event.note.copyWith(tags: currentTags);
-      final result = await updateNoteUseCase(UpdateNoteParams(note: updatedNote));
-      result.fold(
-        (failure) => emit(NotesError(failure: failure)),
-        (note) {
-          emit(NoteUpdatedSuccess(note: note));
-          add(LoadNotes(
-            sortBy: _currentSortBy,
-            sortAscending: _currentSortAscending,
-            filterColor: _currentFilterColor,
-            filterTag: _currentFilterTag,
-          ));
-        },
-      );
-    }
-  }
-
-  Future<void> _onSortNotes(SortNotesEvent event, Emitter<NotesState> emit) async {
-    _currentSortBy = event.sortBy;
-    _currentSortAscending = event.ascending;
-    add(LoadNotes(
-      sortBy: _currentSortBy,
-      sortAscending: _currentSortAscending,
-      filterColor: _currentFilterColor,
-      filterTag: _currentFilterTag,
-    ));
-  }
-
-  Future<void> _onFilterNotesByColor(FilterNotesByColorEvent event, Emitter<NotesState> emit) async {
-    _currentFilterColor = event.color;
-    add(LoadNotes(
-      sortBy: _currentSortBy,
-      sortAscending: _currentSortAscending,
-      filterColor: _currentFilterColor,
-      filterTag: _currentFilterTag,
-    ));
-  }
-
-  Future<void> _onFilterNotesByTag(FilterNotesByTagEvent event, Emitter<NotesState> emit) async {
-    _currentFilterTag = event.tag;
     add(LoadNotes(
       sortBy: _currentSortBy,
       sortAscending: _currentSortAscending,
