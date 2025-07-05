@@ -33,10 +33,9 @@ import '../../features/media_manager/presentation/pages/pdf_viewer_page.dart';
 import '../../features/media_manager/presentation/pages/picture_viewer_page.dart';
 import '../../features/media_manager/presentation/pages/video_viewer_page.dart';
 import '../../features/notes/domain/entities/note_entity.dart';
-import '../../features/notes/presentation/pages/add_notes_page.dart';
-import '../../features/notes/presentation/pages/note_view.dart';
-import '../../features/notes/presentation/pages/notes_page.dart';
-// Missing imports that need to be added:
+import '../../features/notes/presentation/pages/optimized_add_notes_page.dart';
+import '../../features/notes/presentation/pages/optimized_note_view_page.dart';
+import '../../features/notes/presentation/pages/optimized_notes_page.dart';
 import '../../features/pomodoro/presentation/pages/pomodoro_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/todo/presentation/pages/edit_todo_page.dart';
@@ -74,14 +73,14 @@ class AppRouter {
      GoRoute(
         path: '/notes',
         builder: (BuildContext context, GoRouterState state) {
-          return const NotesPage(); // Main Notes Page (list/folders)
+          return const OptimizedNotesPage(); // Main Notes Page (optimized)
         },
         routes: [
           GoRoute(
             path: 'add', // Path relative to /notes -> /notes/add
             builder: (context, state) {
               final NoteEntity? existingNote = state.extra as NoteEntity?;
-              return AddNotesPage(existingNote: existingNote);
+              return OptimizedAddNotesPage(existingNote: existingNote);
             },
           ),
           GoRoute(
@@ -91,7 +90,7 @@ class AppRouter {
               if (noteId == null) {
                 return const Text('Error: Note ID is missing');
               }
-              return NoteViewPage(noteId: noteId);
+              return OptimizedNoteViewPage(noteId: noteId);
             },
           ),
         ],

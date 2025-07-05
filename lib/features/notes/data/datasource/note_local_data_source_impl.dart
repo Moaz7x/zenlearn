@@ -10,12 +10,31 @@ class NoteLocalDataSourceImpl implements NoteLocalDataSource {
   NoteLocalDataSourceImpl({required this.isar});
 
   @override
+  Future<void> clearCache() async {
+    // For Isar, we don't need to implement caching as it's handled internally
+    // This method is here for future extensibility if we add a caching layer
+    return;
+  }
+
+  @override
   Future<NoteModel> createNote(NoteModel note) async {
     try {
       await isar.writeTxn(() async {
         await isar.noteModels.put(note); // Insert or update the note
       });
       return note;
+    } catch (e) {
+      throw DatabaseException();
+    }
+  }
+
+  @override
+  Future<List<NoteModel>> createNotesBatch(List<NoteModel> notes) async {
+    try {
+      await isar.writeTxn(() async {
+        await isar.noteModels.putAll(notes);
+      });
+      return notes;
     } catch (e) {
       throw DatabaseException();
     }
@@ -32,6 +51,19 @@ class NoteLocalDataSourceImpl implements NoteLocalDataSource {
       });
     } catch (e) {
       if (e is NotFoundException) rethrow;
+      throw DatabaseException();
+    }
+  }
+
+  @override
+  Future<void> deleteNotesBatch(List<String> ids) async {
+    try {
+      await isar.writeTxn(() async {
+        for (final id in ids) {
+          await isar.noteModels.filter().idEqualTo(id).deleteFirst();
+        }
+      });
+    } catch (e) {
       throw DatabaseException();
     }
   }
@@ -76,6 +108,84 @@ class NoteLocalDataSourceImpl implements NoteLocalDataSource {
   }
 
   @override
+  Future<List<NoteModel>> getNotesByColor(int color) async {
+    try {
+      final notes = await isar.noteModels
+          .filter()
+          .colorEqualTo(color)
+          .findAll();
+      return notes;
+    } catch (e) {
+      throw DatabaseException();
+    }
+  }
+
+  @override
+  Future<List<NoteModel>> getNotesByTags(List<String> tags) async {
+    try {
+      final notes = await isar.noteModels
+          .filter()
+          .anyOf(tags, (q, tag) => q.tagsElementContains(tag))
+          .findAll();
+      return notes;
+    } catch (e) {
+      throw DatabaseException();
+    }
+  }
+
+  @override
+  Future<int> getNotesCount() async {
+    try {
+      return await isar.noteModels.count();
+    } catch (e) {
+      throw DatabaseException();
+    }
+  }
+
+  @override
+  Future<List<NoteModel>> getNotesPaginated({
+    required int offset,
+    required int limit,
+  }) async {
+    try {
+      final notes = await isar.noteModels
+          .where()
+          .offset(offset)
+          .limit(limit)
+          .findAll();
+
+      // Apply the same sorting logic as getNotes()
+      notes.sort((a, b) {
+        final aOrder = a.order ?? 0;
+        final bOrder = b.order ?? 0;
+        if (aOrder != bOrder) {
+          return aOrder.compareTo(bOrder);
+        }
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return 0;
+      });
+
+      return notes;
+    } catch (e) {
+      throw DatabaseException();
+    }
+  }
+
+  @override
+  Future<List<NoteModel>> getPinnedNotes() async {
+    try {
+      final notes = await isar.noteModels
+          .filter()
+          .isPinnedEqualTo(true)
+          .findAll();
+      return notes;
+    } catch (e) {
+      throw DatabaseException();
+    }
+  }
+
+  @override
   Future<List<NoteModel>> searchNotes(String query) async {
     try {
       final notes = await isar.noteModels
@@ -112,6 +222,20 @@ class NoteLocalDataSourceImpl implements NoteLocalDataSource {
       return note;
     } catch (e) {
       if (e is NotFoundException) rethrow;
+      throw DatabaseException();
+    }
+  }
+
+  // Performance optimization methods implementation
+
+  @override
+  Future<List<NoteModel>> updateNotesBatch(List<NoteModel> notes) async {
+    try {
+      await isar.writeTxn(() async {
+        await isar.noteModels.putAll(notes);
+      });
+      return notes;
+    } catch (e) {
       throw DatabaseException();
     }
   }

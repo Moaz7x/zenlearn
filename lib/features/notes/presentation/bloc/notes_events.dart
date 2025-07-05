@@ -30,6 +30,13 @@ class ClearColorFilterEvent extends NotesEvent {
   List<Object> get props => [];
 }
 
+class ClearSortEvent extends NotesEvent {
+  const ClearSortEvent();
+
+  @override
+  List<Object> get props => [];
+}
+
 class ClearTagFilterEvent extends NotesEvent {
   const ClearTagFilterEvent();
 
@@ -137,6 +144,38 @@ class ReorderNotesEvent extends NotesEvent {
   List<Object> get props => [oldIndex, newIndex, notes];
 }
 
+/// Event to reorder pinned notes specifically
+class ReorderPinnedNotesEvent extends NotesEvent {
+  final int oldIndex;
+  final int newIndex;
+  final List<NoteEntity> pinnedNotes;
+
+  const ReorderPinnedNotesEvent({
+    required this.oldIndex,
+    required this.newIndex,
+    required this.pinnedNotes,
+  });
+
+  @override
+  List<Object> get props => [oldIndex, newIndex, pinnedNotes];
+}
+
+/// Event to reorder unpinned notes specifically
+class ReorderUnpinnedNotesEvent extends NotesEvent {
+  final int oldIndex;
+  final int newIndex;
+  final List<NoteEntity> unpinnedNotes;
+
+  const ReorderUnpinnedNotesEvent({
+    required this.oldIndex,
+    required this.newIndex,
+    required this.unpinnedNotes,
+  });
+
+  @override
+  List<Object> get props => [oldIndex, newIndex, unpinnedNotes];
+}
+
 /// Event to search for notes based on a query.
 class SearchNotesEvent extends NotesEvent {
   final String query;
@@ -148,13 +187,13 @@ class SearchNotesEvent extends NotesEvent {
 }
 
 class SortNotesEvent extends NotesEvent {
-  final String sortBy;
+  final String? sortBy;
   final bool ascending;
 
-  const SortNotesEvent({required this.sortBy, this.ascending = true});
+  const SortNotesEvent({this.sortBy, this.ascending = true});
 
   @override
-  List<Object> get props => [sortBy, ascending];
+  List<Object?> get props => [sortBy, ascending];
 }
 
 /// Event to toggle the pinned status of a note.

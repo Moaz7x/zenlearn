@@ -3,7 +3,7 @@ import 'package:zenlearn/features/notes/domain/entities/note_entity.dart';
 
 class NoteCard extends StatelessWidget {
   final NoteEntity note;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final VoidCallback onTogglePin;
   final Function(String tag)? onAddTag;
   final Function(String tag)? onRemoveTag;
@@ -11,7 +11,7 @@ class NoteCard extends StatelessWidget {
   const NoteCard({
     super.key,
     required this.note,
-    required this.onTap,
+    this.onTap,
     required this.onTogglePin,
     this.onAddTag,
     this.onRemoveTag,

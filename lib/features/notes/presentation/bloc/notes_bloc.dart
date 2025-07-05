@@ -49,6 +49,8 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     on<FilterNotesByTagEvent>(_onFilterNotesByTag);
     on<ClearTagFilterEvent>(_onClearTagFilter);
     on<ClearColorFilterEvent>(_onClearColorFilter);
+    on<ReorderPinnedNotesEvent>(_onReorderPinnedNotes);
+    on<ReorderUnpinnedNotesEvent>(_onReorderUnpinnedNotes);
   }
 
   Future<void> _onAddTagToNote(AddTagToNoteEvent event, Emitter<NotesState> emit) async {
@@ -297,6 +299,96 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
       currentFilterColor: _currentFilterColor,
       currentFilterTag: _currentFilterTag,
     ));
+  }
+
+  /// Handles reordering of pinned notes
+  Future<void> _onReorderPinnedNotes(ReorderPinnedNotesEvent event, Emitter<NotesState> emit) async {
+    try {
+      // Don't emit loading state for better UX (optimistic updates already shown)
+
+      // Update the order field for each pinned note based on new positions
+      final List<Future<void>> updateFutures = [];
+
+      for (int i = 0; i < event.pinnedNotes.length; i++) {
+        final note = event.pinnedNotes[i];
+        final updatedNote = note.copyWith(
+          order: i, // Set order based on position in list
+          updatedAt: DateTime.now(),
+        );
+
+        // Add to batch update
+        updateFutures.add(
+          updateNoteUseCase(UpdateNoteParams(note: updatedNote)).then((result) {
+            result.fold(
+              (failure) {
+                // Log error but don't stop other updates
+                print('Error updating pinned note order for ${note.id}: ${failure.toString()}');
+              },
+              (_) {}, // Success - continue
+            );
+          })
+        );
+      }
+
+      // Wait for all updates to complete
+      await Future.wait(updateFutures);
+
+      // Reload notes to reflect the new order
+      add(LoadNotes(
+        sortBy: _currentSortBy,
+        sortAscending: _currentSortAscending,
+        filterColor: _currentFilterColor,
+        filterTag: _currentFilterTag,
+      ));
+
+    } catch (e) {
+      emit(NotesError(failure: Exception('Failed to reorder pinned notes: $e') as dynamic));
+    }
+  }
+
+  /// Handles reordering of unpinned notes
+  Future<void> _onReorderUnpinnedNotes(ReorderUnpinnedNotesEvent event, Emitter<NotesState> emit) async {
+    try {
+      // Don't emit loading state for better UX (optimistic updates already shown)
+
+      // Update the order field for each unpinned note based on new positions
+      final List<Future<void>> updateFutures = [];
+
+      for (int i = 0; i < event.unpinnedNotes.length; i++) {
+        final note = event.unpinnedNotes[i];
+        final updatedNote = note.copyWith(
+          order: i, // Set order based on position in list
+          updatedAt: DateTime.now(),
+        );
+
+        // Add to batch update
+        updateFutures.add(
+          updateNoteUseCase(UpdateNoteParams(note: updatedNote)).then((result) {
+            result.fold(
+              (failure) {
+                // Log error but don't stop other updates
+                print('Error updating unpinned note order for ${note.id}: ${failure.toString()}');
+              },
+              (_) {}, // Success - continue
+            );
+          })
+        );
+      }
+
+      // Wait for all updates to complete
+      await Future.wait(updateFutures);
+
+      // Reload notes to reflect the new order
+      add(LoadNotes(
+        sortBy: _currentSortBy,
+        sortAscending: _currentSortAscending,
+        filterColor: _currentFilterColor,
+        filterTag: _currentFilterTag,
+      ));
+
+    } catch (e) {
+      emit(NotesError(failure: Exception('Failed to reorder unpinned notes: $e') as dynamic));
+    }
   }
 
   Future<void> _onSearchNotes(SearchNotesEvent event, Emitter<NotesState> emit) async {
