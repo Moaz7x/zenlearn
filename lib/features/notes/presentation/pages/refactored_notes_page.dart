@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -16,135 +14,23 @@ import '../mixins/notes_search_mixin.dart';
 import '../widgets/desktop_notes_layout.dart';
 import '../widgets/mobile_notes_layout.dart';
 import '../widgets/notes_list_widget.dart';
-import '../widgets/notes_search_bar.dart';
 import '../widgets/notes_state_widgets.dart';
 import '../widgets/reorderable_notes_list.dart';
 import '../widgets/responsive_layout.dart';
 import '../widgets/tablet_notes_layout.dart';
 import '../widgets/unified_note_card.dart';
 
-/// A grid view variant of the notes page
-class NotesGridPage extends StatelessWidget {
-  const NotesGridPage({super.key});
+/// Refactored optimized notes page with clean separation of concerns
+class RefactoredNotesPage extends StatefulWidget {
+  const RefactoredNotesPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'ملاحظاتي - عرض الشبكة',
-      body: Column(
-        children: [
-          const NotesSearchBar(),
-          Expanded(
-            child: BlocBuilder<NotesBloc, NotesState>(
-              builder: (context, state) {
-                if (state is NotesLoading) {
-                  return const NotesLoadingWidget();
-                }
-
-                if (state is NotesError) {
-                  return NotesErrorWidget(
-                    failure: state.failure,
-                    onRetry: () =>
-                        context.read<NotesBloc>().add(const LoadNotes()),
-                  );
-                }
-
-                if (state is NotesLoaded) {
-                  if (state.notes.isEmpty) {
-                    return NotesEmptyWidget(
-                      onAction: () => context.go('/notes/add'),
-                    );
-                  }
-
-                  return NotesGridWidget(
-                    notes: state.notes,
-                    crossAxisCount: 2,
-                    padding: const EdgeInsets.all(16),
-                  );
-                }
-
-                return const NotesEmptyWidget();
-              },
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.go('/notes/add'),
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
+  State<RefactoredNotesPage> createState() => _RefactoredNotesPageState();
 }
 
-/// Optimized notes page with extracted components and improved performance
-class OptimizedNotesPage extends StatefulWidget {
-  const OptimizedNotesPage({super.key});
+class _RefactoredNotesPageState extends State<RefactoredNotesPage>
+    with TickerProviderStateMixin, RouteAware, NotesSearchMixin, NotesReorderingMixin, NotesAnimationMixin {
 
-  @override
-  State<OptimizedNotesPage> createState() => _OptimizedNotesPageState();
-}
-
-/// A simplified notes page for basic use cases
-class SimpleNotesPage extends StatelessWidget {
-  const SimpleNotesPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'ملاحظاتي',
-      body: Column(
-        children: [
-          const NotesSearchBar(),
-          Expanded(
-            child: BlocBuilder<NotesBloc, NotesState>(
-              builder: (context, state) {
-                if (state is NotesLoading) {
-                  return const NotesLoadingWidget();
-                }
-
-                if (state is NotesError) {
-                  return NotesErrorWidget(
-                    failure: state.failure,
-                    onRetry: () =>
-                        context.read<NotesBloc>().add(const LoadNotes()),
-                  );
-                }
-
-                if (state is NotesLoaded) {
-                  if (state.notes.isEmpty) {
-                    return NotesEmptyWidget(
-                      onAction: () => context.go('/notes/add'),
-                    );
-                  }
-
-                  return NotesListWidget(
-                    notes: state.notes,
-                    padding: const EdgeInsets.all(16),
-                  );
-                }
-
-                return const NotesEmptyWidget();
-              },
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.go('/notes/add'),
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-}
-
-class _OptimizedNotesPageState extends State<OptimizedNotesPage>
-    with
-        TickerProviderStateMixin,
-        RouteAware,
-        NotesSearchMixin,
-        NotesReorderingMixin,
-        NotesAnimationMixin {
   // Current state
   List<NoteEntity> _notes = [];
   List<NoteEntity> _allNotes = [];
@@ -231,22 +117,6 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Register with RouteObserver for proper lifecycle management
-    final route = ModalRoute.of(context);
-    if (route is PageRoute) {
-      // routeObserver.subscribe(this, route);
-    }
-  }
-
-  @override
-  void didPopNext() {
-    // Called when returning to this page from another page
-    _loadNotes();
-  }
-
-  @override
   void dispose() {
     disposeAnimationMixin();
     disposeSearchMixin();
@@ -260,10 +130,6 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
     initializeAnimations();
     _loadNotes();
   }
-
-  /// Builds the desktop layout (optimized for large screens)
-
-  /// Builds the desktop notes content with grid layout
 
   /// Builds the desktop notes list with grid layout
   Widget _buildDesktopNotesList() {
@@ -281,9 +147,11 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
 
   /// Builds the desktop reorderable notes list using the existing widget component
   Widget _buildDesktopReorderableNotesList() {
-    final canReorder = !isSearching &&
-        _currentFilterColor == null &&
-        _currentFilterTag == null;
+    final canReorder = NotesPageHelper.canReorderNotes(
+      isSearching: isSearching,
+      currentFilterColor: _currentFilterColor,
+      currentFilterTag: _currentFilterTag,
+    );
 
     if (!canReorder) {
       // Use grid layout for desktop when reordering is disabled
@@ -317,26 +185,26 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
     );
   }
 
+  /// Builds the notes content with proper state handling
   Widget _buildNotesContent(NotesState state) {
     // Handle loading states
     if (state is NotesLoading) {
       if (_notes.isEmpty) {
-        final message = isSearching
-            ? 'جاري البحث في الملاحظات...'
-            : 'جاري تحميل الملاحظات...';
+        final message = NotesPageHelper.getLoadingMessage(
+          isSearching: isSearching,
+          searchQuery: searchQuery,
+        );
         return NotesLoadingWidget(message: message);
       } else {
-        // Show existing notes with loading indicator for search
         return Stack(
           children: [
             _buildNotesList(),
-            if (isSearching)
-              const Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: LinearProgressIndicator(),
-              ),
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: LinearProgressIndicator(),
+            ),
           ],
         );
       }
@@ -345,9 +213,7 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
     if (state is NotesError) {
       return NotesErrorWidget(
         failure: state.failure,
-        onRetry: isSearching
-            ? () => handleSearchQueryChanged(searchQuery)
-            : _loadNotes,
+        onRetry: isSearching ? () => handleSearchQueryChanged(searchQuery) : _loadNotes,
       );
     }
 
@@ -363,14 +229,22 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
     }
 
     if (_notes.isEmpty) {
-      if (isSearching && searchQuery.isNotEmpty) {
+      if (NotesPageHelper.shouldShowSearchEmptyState(
+        notes: _notes,
+        isSearching: isSearching,
+        searchQuery: searchQuery,
+      )) {
         return NotesSearchEmptyWidget(
           searchQuery: searchQuery,
           onClearSearch: clearSearch,
         );
       }
 
-      if (_currentFilterColor != null || _currentFilterTag != null) {
+      if (NotesPageHelper.shouldShowFilterEmptyState(
+        notes: _notes,
+        currentFilterColor: _currentFilterColor,
+        currentFilterTag: _currentFilterTag,
+      )) {
         final filterType = _currentFilterTag != null ? 'العلامة' : 'اللون';
         final filterValue = _currentFilterTag ?? 'اللون المحدد';
 
@@ -392,7 +266,7 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
     return _buildNotesList();
   }
 
-  /// Builds the notes list with pull-to-refresh functionality and advanced reordering
+  /// Builds the notes list with pull-to-refresh functionality
   Widget _buildNotesList() {
     return RefreshIndicator(
       onRefresh: () async {
@@ -401,7 +275,6 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
         } else {
           _loadNotes();
         }
-        // Wait a bit for the animation
         await Future.delayed(const Duration(milliseconds: 500));
       },
       child: _buildReorderableNotesList(),
@@ -410,9 +283,11 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
 
   /// Builds the reorderable notes list using the existing widget component
   Widget _buildReorderableNotesList() {
-    final canReorder = !isSearching &&
-        _currentFilterColor == null &&
-        _currentFilterTag == null;
+    final canReorder = NotesPageHelper.canReorderNotes(
+      isSearching: isSearching,
+      currentFilterColor: _currentFilterColor,
+      currentFilterTag: _currentFilterTag,
+    );
 
     if (!canReorder) {
       // Use NotesListWidget for non-reorderable list
@@ -433,31 +308,16 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
     );
   }
 
-
-
-
-
-
-
-
-
-
-
   void _loadNotes() {
     context.read<NotesBloc>().add(LoadNotes(
-          sortBy: _currentSortBy,
-          sortAscending: _currentSortAscending,
-          filterColor: _currentFilterColor,
-          filterTag: _currentFilterTag,
-        ));
+      sortBy: _currentSortBy,
+      sortAscending: _currentSortAscending,
+      filterColor: _currentFilterColor,
+      filterTag: _currentFilterTag,
+    ));
   }
 
-
-
-
-
-  void _updateFilters(
-      String? sortBy, bool sortAscending, int? filterColor, String? filterTag) {
+  void _updateFilters(String? sortBy, bool sortAscending, int? filterColor, String? filterTag) {
     setState(() {
       _currentSortBy = sortBy;
       _currentSortAscending = sortAscending;
@@ -471,9 +331,7 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
       setState(() {
         _notes = notes;
         // Update all notes if this is not a filtered/search result
-        if (!isSearching &&
-            _currentFilterColor == null &&
-            _currentFilterTag == null) {
+        if (!isSearching && _currentFilterColor == null && _currentFilterTag == null) {
           _allNotes = List.from(notes);
         }
         // Separate pinned and unpinned notes for reordering
