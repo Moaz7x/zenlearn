@@ -14,6 +14,7 @@ import '../widgets/enhanced_filter_bar.dart';
 import '../widgets/notes_list_widget.dart';
 import '../widgets/notes_search_bar.dart';
 import '../widgets/notes_state_widgets.dart';
+import '../widgets/reorderable_notes_list.dart';
 import '../widgets/responsive_layout.dart';
 import '../widgets/unified_note_card.dart';
 
@@ -407,7 +408,7 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
 
 
 
-  /// Builds the desktop reorderable notes list with grid layout
+  /// Builds the desktop reorderable notes list using the existing widget component
   Widget _buildDesktopReorderableNotesList() {
     final canReorder = !_isSearching &&
                       _currentFilterColor == null &&
@@ -435,97 +436,19 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
       );
     }
 
-    // For reorderable desktop view, use a custom grid with sections
-    return CustomScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        // Pinned notes section
-        if (_pinnedNotes.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: _buildSectionHeader('الملاحظات المثبتة', _pinnedNotes.length),
-          ),
-          SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.2,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                if (index >= _pinnedNotes.length) {
-                  return const SizedBox.shrink();
-                }
-
-                return UnifiedNoteCard(
-                  key: ValueKey('pinned_${_pinnedNotes[index].id}_${_pinnedNotes[index].hashCode}'),
-                  note: _pinnedNotes[index],
-                  index: index,
-                  canReorder: true,
-                  isPinnedSection: true,
-                );
-              },
-              childCount: _pinnedNotes.length,
-            ),
-          ),
-        ],
-
-        // Unpinned notes section
-        if (_unpinnedNotes.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: _buildSectionHeader('الملاحظات العادية', _unpinnedNotes.length),
-          ),
-          SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.2,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                if (index >= _unpinnedNotes.length) {
-                  return const SizedBox.shrink();
-                }
-
-                return UnifiedNoteCard(
-                  key: ValueKey('unpinned_${_unpinnedNotes[index].id}_${_unpinnedNotes[index].hashCode}'),
-                  note: _unpinnedNotes[index],
-                  index: index,
-                  canReorder: true,
-                  isPinnedSection: false,
-                );
-              },
-              childCount: _unpinnedNotes.length,
-            ),
-          ),
-        ],
-
-        // Empty state if no notes
-        if (_pinnedNotes.isEmpty && _unpinnedNotes.isEmpty)
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 200),
-          ),
-      ],
+    // Use the existing ReorderableNotesList widget for reorderable desktop view
+    return ReorderableNotesList(
+      pinnedNotes: _pinnedNotes,
+      unpinnedNotes: _unpinnedNotes,
+      onPinnedNotesReorder: _handlePinnedNotesReorder,
+      onUnpinnedNotesReorder: _handleUnpinnedNotesReorder,
+      isReordering: _isReordering,
     );
   }
 
 
 
-  /// Builds a drag handle that enables dragging only when pressed
-  Widget _buildDragHandle(int index) {
-    return ReorderableDragStartListener(
-      index: index,
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        child: Icon(
-          Icons.drag_handle,
-          color: Colors.grey[600],
-          size: 20,
-        ),
-      ),
-    );
-  }
+
 
   /// Builds the mobile layout (single column)
   Widget _buildMobileLayout(BuildContext context) {
@@ -603,20 +526,7 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
     
   }
 
-  /// Builds the trailing widget for note cards (pin icon + optional drag handle)
-  Widget _buildNoteCardTrailing(NoteEntity note, bool canReorder, int index) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (note.isPinned)
-          Icon(Icons.push_pin, size: 16, color: Colors.orange[700]),
-        if (canReorder) ...[
-          const SizedBox(width: 8),
-          _buildDragHandle(index),
-        ],
-      ],
-    );
-  }
+
 
   Widget _buildNotesContent(NotesState state) {
     // Handle loading states
@@ -707,180 +617,34 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
     );
   }
 
-  /// Builds the advanced reorderable notes list with separate sections
+  /// Builds the reorderable notes list using the existing widget component
   Widget _buildReorderableNotesList() {
     final canReorder = !_isSearching &&
                       _currentFilterColor == null &&
                       _currentFilterTag == null;
 
     if (!canReorder) {
-      // Use unified note cards when reordering is disabled
-      return ListView.builder(
-        key: const ValueKey('notes_list_non_reorderable'),
+      // Use NotesListWidget for non-reorderable list
+      return NotesListWidget(
+        notes: _notes,
+        isReorderable: false,
         padding: const EdgeInsets.all(16),
-        physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: _notes.length,
-        cacheExtent: 500, // Cache 500 pixels ahead for smooth scrolling
-        itemBuilder: (context, index) {
-          final note = _notes[index];
-          return UnifiedNoteCard(
-            key: ValueKey('note_${note.id}'),
-            note: note,
-            index: index,
-            canReorder: false,
-          );
-        },
       );
     }
 
-    // Continue with reorderable view
-
-    return Stack(
-      children: [
-        CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-        // Pinned notes section
-        if (_pinnedNotes.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: _buildSectionHeader('الملاحظات المثبتة', _pinnedNotes.length),
-          ),
-          SliverReorderableList(
-            itemCount: _pinnedNotes.length,
-            onReorder: (oldIndex, newIndex) => _handlePinnedNotesReorder(oldIndex, newIndex),
-            proxyDecorator: _buildReorderProxy,
-            itemBuilder: (context, index) {
-              // Ensure index is within bounds
-              if (index >= _pinnedNotes.length) {
-                return const SizedBox.shrink();
-              }
-
-              return _buildUnifiedNoteCard(
-                note: _pinnedNotes[index],
-                index: index,
-                canReorder: true,
-                isPinnedSection: true,
-              );
-            },
-          ),
-        ],
-
-        // Unpinned notes section
-        if (_unpinnedNotes.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: _buildSectionHeader('الملاحظات العادية', _unpinnedNotes.length),
-          ),
-          SliverReorderableList(
-            itemCount: _unpinnedNotes.length,
-            onReorder: (oldIndex, newIndex) => _handleUnpinnedNotesReorder(oldIndex, newIndex),
-            proxyDecorator: _buildReorderProxy,
-            itemBuilder: (context, index) {
-              // Ensure index is within bounds
-              if (index >= _unpinnedNotes.length) {
-                return const SizedBox.shrink();
-              }
-
-              return _buildUnifiedNoteCard(
-                note: _unpinnedNotes[index],
-                index: index,
-                canReorder: true,
-                isPinnedSection: false,
-              );
-            },
-          ),
-        ],
-
-        // Empty state if no notes
-        if (_pinnedNotes.isEmpty && _unpinnedNotes.isEmpty)
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 200),
-          ),
-      ],
-    ),
-
-        // Reordering indicator
-        if (_isReordering)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 3,
-              color: Theme.of(context).primaryColor,
-              child: const LinearProgressIndicator(),
-            ),
-          ),
-      ],
+    // Use the existing ReorderableNotesList widget
+    return ReorderableNotesList(
+      pinnedNotes: _pinnedNotes,
+      unpinnedNotes: _unpinnedNotes,
+      onPinnedNotesReorder: _handlePinnedNotesReorder,
+      onUnpinnedNotesReorder: _handleUnpinnedNotesReorder,
+      isReordering: _isReordering,
     );
   }
 
-  /// Builds a proxy decorator for reordering visual feedback
-  Widget _buildReorderProxy(Widget child, int index, Animation<double> animation) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, child) {
-        final double elevation = Tween<double>(
-          begin: 2.0,
-          end: 8.0,
-        ).evaluate(animation);
 
-        final double scale = Tween<double>(
-          begin: 1.0,
-          end: 1.05,
-        ).evaluate(animation);
 
-        return Transform.scale(
-          scale: scale,
-          child: Material(
-            elevation: elevation,
-            borderRadius: BorderRadius.circular(8),
-            child: child,
-          ),
-        );
-      },
-      child: child,
-    );
-  }
 
-  /// Builds a section header for pinned/unpinned notes
-  Widget _buildSectionHeader(String title, int count) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Row(
-        children: [
-          Icon(
-            title.contains('المثبتة') ? Icons.push_pin : Icons.note,
-            size: 20,
-            color: Theme.of(context).primaryColor,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).primaryColor,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              count.toString(),
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).primaryColor,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   /// Builds the tablet layout (optimized for medium screens)
   Widget _buildTabletLayout(BuildContext context) {
@@ -965,78 +729,7 @@ class _OptimizedNotesPageState extends State<OptimizedNotesPage>
     );
   }
 
-  /// Builds a unified note card that works for both reorderable and non-reorderable lists
-  Widget _buildUnifiedNoteCard({
-    required NoteEntity note,
-    required int index,
-    required bool canReorder,
-    bool isPinnedSection = false,
-  }) {
-    // Create a unique, stable key for each note item
-    final String keyPrefix = isPinnedSection ? 'pinned' : 'unpinned';
-    final String uniqueKey = '${keyPrefix}_${note.id}_${note.hashCode}';
 
-    // Build the core note card content
-    final Widget noteCardContent = Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Card(
-        elevation: 2,
-        child: ListTile(
-          leading: Container(
-            width: 4,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              color: note.color != null ? Color(note.color!) : Colors.grey[300],
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          title: Text(
-            note.title,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                note.content,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (note.tags != null && note.tags!.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 4,
-                  children: note.tags!.take(3).map((tag) => Chip(
-                    label: Text(tag, style: const TextStyle(fontSize: 10)),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  )).toList(),
-                ),
-              ],
-            ],
-          ),
-          trailing: _buildNoteCardTrailing(note, canReorder, index),
-          onTap: () => context.go("/notes/view/${note.id}"),
-        ),
-      ),
-    );
-
-    // Wrap with reorderable functionality if needed
-    if (canReorder) {
-      return ReorderableDragStartListener(
-        key: ValueKey(uniqueKey),
-        index: index,
-        enabled: false, // Disable automatic drag from entire widget
-        child: noteCardContent,
-      );
-    } else {
-      return Container(
-        key: ValueKey(uniqueKey),
-        child: noteCardContent,
-      );
-    }
-  }
 
   /// Clears the search and reloads all notes
   void _clearSearch() {
